@@ -72,11 +72,9 @@ public class ExcelValidationService {
             appendError(errorBuilder, "ชื่อไม่ควรมีตัวเลข");
         } else if (name.contains("  ")) {
             appendError(errorBuilder, "ชื่อไม่ควรมีช่องว่างซ้ำ");
-        } else if (!name.matches("^[\\p{L}\\s]+$")) {
-            appendError(errorBuilder, "ชื่อไม่ถูกต้อง");
         } else if (!name.matches("^[ก-๙A-Za-z\\s]+$")) {
-            appendError(errorBuilder, "ชื่อไม่ควรมีอักขระที่ไม่ใช่ภาษาไทยหรือภาษาอังกฤษ");
-    }
+            appendError(errorBuilder, "ชื่อไม่ถูกต้อง");
+        }
     }
 
     private void validateEmail(String email, StringBuilder errorBuilder) {
