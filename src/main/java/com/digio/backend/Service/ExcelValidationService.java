@@ -13,49 +13,27 @@ import java.util.stream.Collectors;
 @Service
 public class ExcelValidationService {
 
+    private static final int MAX_NAME_LENGTH = 50;
+    private static final int MAX_ADDRESS_LENGTH = 100;
+    private static final int PHONE_NUMBER_LENGTH = 10;
+    private static final int CITIZEN_ID_LENGTH = 13;
+
     public List<String> validateAndRejectExcel(MultipartFile file) {
         Map<Integer, StringBuilder> errorMap = new ConcurrentSkipListMap<>();
 
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
 
-            sheet.forEach(row -> {
-                if (row.getRowNum() == 0) return;
+            for (Row row : sheet) {
+                if (row.getRowNum() == 0) continue;
 
                 StringBuilder errorBuilder = new StringBuilder();
-                String name = getCellValue(row.getCell(0));
-                String email = getCellValue(row.getCell(1));
-                String citizenId = getCellValue(row.getCell(2));
-                String address = getCellValue(row.getCell(3));
-                String phoneNum = getCellValue(row.getCell(4));
-
-                if (!isValidName(name)) {
-                    appendError(errorBuilder,"ชื่อไม่ถูกต้อง");
-                }
-
-                if (!isValidEmail(email)) {
-                    appendError(errorBuilder,"อีเมลไม่ถูกต้อง");
-                }
-
-                if (!isValidCitizenId(citizenId)) {
-                    if (!errorBuilder.isEmpty()) {
-                        errorBuilder.append(", ");
-                    }
-                    errorBuilder.append("บัตรประชาชนไม่ถูกต้อง");
-                }
-
-                if (!isValidAddress(address)) {
-                    appendError(errorBuilder, "ที่อยู่ไม่ถูกต้อง");
-                }
-
-                if (!isValidPhoneNum(phoneNum)) {
-                    appendError(errorBuilder, "หมายเลขโทรศัพท์ไม่ถูกต้อง");
-                }
+                validateRow(row, errorBuilder);
 
                 if (!errorBuilder.isEmpty()) {
                     errorMap.put(row.getRowNum() + 1, errorBuilder);
                 }
-            });
+            }
         } catch (IOException e) {
             throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้ โปรดตรวจสอบไฟล์ที่อัปโหลด", e);
         }
@@ -65,32 +43,50 @@ public class ExcelValidationService {
                 .collect(Collectors.toList());
     }
 
-    private boolean isValidName(String name) {
-        return name != null
-                && !name.trim().isEmpty()
-                && name.length() <= 50
-                && !EmailValidator.getInstance().isValid(name)
-                && !name.matches("^\\d{10}$");
+    private void validateRow(Row row, StringBuilder errorBuilder) {
+        String name = getCellValue(row.getCell(0));
+        String email = getCellValue(row.getCell(1));
+        String citizenId = getCellValue(row.getCell(2));
+        String address = getCellValue(row.getCell(3));
+        String phoneNum = getCellValue(row.getCell(4));
+
+        validateName(name, errorBuilder);
+        validateEmail(email, errorBuilder);
+        validateCitizenId(citizenId, errorBuilder);
+        validateAddress(address, errorBuilder);
+        validatePhoneNum(phoneNum, errorBuilder);
     }
 
-    private boolean isValidEmail(String email) {
-        return email != null && EmailValidator.getInstance().isValid(email) && email.length() <= 50;
+    private void validateName(String name, StringBuilder errorBuilder) {
+        if (name == null || name.trim().isEmpty() || name.length() > MAX_NAME_LENGTH
+                || EmailValidator.getInstance().isValid(name) || name.matches("^\\d{" + PHONE_NUMBER_LENGTH + "}$")) {
+            appendError(errorBuilder, "ชื่อไม่ถูกต้อง");
+        }
     }
 
-    private boolean isValidCitizenId(String citizenId) {
-        return citizenId != null && citizenId.matches("^\\d{13}$");
+    private void validateEmail(String email, StringBuilder errorBuilder) {
+        if (email == null || !EmailValidator.getInstance().isValid(email) || email.length() > MAX_NAME_LENGTH) {
+            appendError(errorBuilder, "อีเมลไม่ถูกต้อง");
+        }
     }
 
-    private boolean isValidAddress(String address) {
-        return address != null
-                && !address.trim().isEmpty()
-                && address.length() <= 100
-                && !EmailValidator.getInstance().isValid(address)
-                && !address.matches("^\\d{10}$");
+    private void validateCitizenId(String citizenId, StringBuilder errorBuilder) {
+        if (citizenId == null || !citizenId.matches("^\\d{" + CITIZEN_ID_LENGTH + "}$")) {
+            appendError(errorBuilder, "บัตรประชาชนไม่ถูกต้อง");
+        }
     }
 
-    private boolean isValidPhoneNum(String phoneNum) {
-        return phoneNum != null && phoneNum.matches("^\\d{10}$");
+    private void validateAddress(String address, StringBuilder errorBuilder) {
+        if (address == null || address.trim().isEmpty() || address.length() > MAX_ADDRESS_LENGTH
+                || EmailValidator.getInstance().isValid(address) || address.matches("^\\d{" + PHONE_NUMBER_LENGTH + "}$")) {
+            appendError(errorBuilder, "ที่อยู่ไม่ถูกต้อง");
+        }
+    }
+
+    private void validatePhoneNum(String phoneNum, StringBuilder errorBuilder) {
+        if (phoneNum == null || !phoneNum.matches("^\\d{" + PHONE_NUMBER_LENGTH + "}$")) {
+            appendError(errorBuilder, "หมายเลขโทรศัพท์ไม่ถูกต้อง");
+        }
     }
 
     private String getCellValue(Cell cell) {
