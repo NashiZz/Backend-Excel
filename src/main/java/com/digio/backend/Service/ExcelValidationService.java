@@ -58,10 +58,25 @@ public class ExcelValidationService {
     }
 
     private void validateName(String name, StringBuilder errorBuilder) {
-        if (name == null || name.trim().isEmpty() || name.length() > MAX_NAME_LENGTH
-                || EmailValidator.getInstance().isValid(name) || name.matches("^\\d{" + PHONE_NUMBER_LENGTH + "}$")) {
+        if (name == null || name.trim().isEmpty() || name.length() > MAX_NAME_LENGTH) {
             appendError(errorBuilder, "ชื่อไม่ถูกต้อง");
-        }
+        } else if (name.length() < 2) {
+            appendError(errorBuilder, "ชื่อควรมีความยาวอย่างน้อย 2 ตัวอักษร");
+        } else if (EmailValidator.getInstance().isValid(name)) {
+            appendError(errorBuilder, "ชื่อไม่ควรเป็นอีเมล");
+        } else if (name.matches("^\\d{" + PHONE_NUMBER_LENGTH + "}$")) {
+            appendError(errorBuilder, "ชื่อไม่ควรเป็นหมายเลขโทรศัพท์");
+        } else if (name.matches(".*[!@#$%^&*(),.?\":{}|<>].*")) {
+            appendError(errorBuilder, "ชื่อไม่ควรมีตัวอักษรพิเศษ");
+        } else if (name.matches(".*\\d.*")) {
+            appendError(errorBuilder, "ชื่อไม่ควรมีตัวเลข");
+        } else if (name.contains("  ")) {
+            appendError(errorBuilder, "ชื่อไม่ควรมีช่องว่างซ้ำ");
+        } else if (!name.matches("^[\\p{L}\\s]+$")) {
+            appendError(errorBuilder, "ชื่อไม่ถูกต้อง");
+        } else if (!name.matches("^[ก-๙A-Za-z\\s]+$")) {
+            appendError(errorBuilder, "ชื่อไม่ควรมีอักขระที่ไม่ใช่ภาษาไทยหรือภาษาอังกฤษ");
+    }
     }
 
     private void validateEmail(String email, StringBuilder errorBuilder) {
@@ -78,13 +93,13 @@ public class ExcelValidationService {
 
     private void validateAddress(String address, StringBuilder errorBuilder) {
         if (address == null || address.trim().isEmpty() || address.length() > MAX_ADDRESS_LENGTH
-                || EmailValidator.getInstance().isValid(address) || address.matches("^\\d{" + PHONE_NUMBER_LENGTH + "}$")) {
+                || address.matches(".*[<>#&@].*")) {
             appendError(errorBuilder, "ที่อยู่ไม่ถูกต้อง");
         }
     }
 
     private void validatePhoneNum(String phoneNum, StringBuilder errorBuilder) {
-        if (phoneNum == null || !phoneNum.matches("^\\d{" + PHONE_NUMBER_LENGTH + "}$")) {
+        if (phoneNum == null || !phoneNum.matches("^0[1-9][0-9]{8}$")) {
             appendError(errorBuilder, "หมายเลขโทรศัพท์ไม่ถูกต้อง");
         }
     }
