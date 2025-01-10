@@ -12,13 +12,15 @@ public class NameValidator {
     public static String validate(String name) {
         StringBuilder errorBuilder = new StringBuilder();
 
+        String trimmedName = name == null ? null : name.trim().toLowerCase();
+
         if (name == null || name.trim().isEmpty()) {
             appendError(errorBuilder, "ชื่อไม่ควรว่าง");
         } else if (name.length() > MAX_NAME_LENGTH) {
             appendError(errorBuilder, "ชื่อยาวเกินไป");
         } else if (name.length() < 2) {
             appendError(errorBuilder, "ชื่อควรมีความยาวอย่างน้อย 2 ตัวอักษร");
-        } else if (INVALID_KEYWORDS.stream().anyMatch(keyword -> name.trim().equalsIgnoreCase(keyword))) {
+        } else if (INVALID_KEYWORDS.stream().anyMatch(trimmedName::contains)) {
             appendError(errorBuilder, "ชื่อไม่ถูกต้อง");
         } else if (EmailValidator.getInstance().isValid(name)) {
             appendError(errorBuilder, "ชื่อไม่ควรเป็นอีเมล");

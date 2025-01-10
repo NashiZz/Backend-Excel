@@ -6,9 +6,10 @@ public class CitizenIdValidator {
 
         if (citizenId == null || !citizenId.matches("^\\d{13}$")) {
             appendError(errorBuilder, "บัตรประชาชนไม่ถูกต้อง");
-        } else if (!isValidCitizenId(citizenId)) {
-            appendError(errorBuilder, "บัตรประชาชนไม่ถูกต้อง");
         }
+//        else if (!isValidCitizenId(citizenId)) {
+//            appendError(errorBuilder, "บัตรประชาชนไม่ถูกต้อง");
+//        }
 
         return errorBuilder.isEmpty() ? null : errorBuilder.toString();
     }

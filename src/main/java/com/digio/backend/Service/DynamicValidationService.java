@@ -9,13 +9,14 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 @Service
 public class DynamicValidationService {
 
-    private final Map<String, Function<String, String>> validationRules = new HashMap<>();
+    private final Map<Pattern, Function<String, String>> validationRules = new HashMap<>();
 
     public DynamicValidationService() {
         initializeDefaultValidationRules();
@@ -63,23 +64,31 @@ public class DynamicValidationService {
             String header = headers.get(i);
             String cellValue = getCellValue(row.getCell(i));
 
-            if (validationRules.containsKey(header)) {
-                String error = validationRules.get(header).apply(cellValue);
-                if (error != null) {
-                    appendError(errorBuilder, error);
+            boolean matched = false;
+
+            for (Map.Entry<Pattern, Function<String, String>> entry : validationRules.entrySet()) {
+                if (entry.getKey().matcher(header).matches()) {
+                    matched = true;
+                    String error = entry.getValue().apply(cellValue);
+                    if (error != null) {
+                        appendError(errorBuilder, error);
+                    }
+                    break;
                 }
-            } else {
-                appendError(errorBuilder, "พบหัวข้อที่ไม่รู้จัก");
+            }
+
+            if (!matched) {
+                appendError(errorBuilder, "พบหัวข้อที่ไม่รู้จัก: " + header);
             }
         }
     }
 
     private void initializeDefaultValidationRules() {
-        validationRules.put("name", NameValidator::validate);
-        validationRules.put("email", EmailValidate::validate);
-        validationRules.put("citizenid", CitizenIdValidator::validate);
-        validationRules.put("phone", PhoneValidator::validate);
-        validationRules.put("address", AddressValidator::validate);
+        validationRules.put(Pattern.compile("^name.*$"), NameValidator::validate);
+        validationRules.put(Pattern.compile("^email.*$"), EmailValidate::validate);
+        validationRules.put(Pattern.compile("^citizenid.*$"), CitizenIdValidator::validate);
+        validationRules.put(Pattern.compile("^phone.*$"), PhoneValidator::validate);
+        validationRules.put(Pattern.compile("^address.*$"), AddressValidator::validate);
     }
 
     private String getCellValue(Cell cell) {

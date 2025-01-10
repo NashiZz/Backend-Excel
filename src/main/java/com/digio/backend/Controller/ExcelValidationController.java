@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -41,19 +42,19 @@ public class ExcelValidationController {
     @PostMapping("/dynamic")
     public ResponseEntity<?> validateExcelFile(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body("โปรดอัปโหลดไฟล์ Excel ที่ถูกต้อง");
+            return ResponseEntity.badRequest().body(Collections.singletonMap("message", "โปรดอัปโหลดไฟล์ Excel ที่ถูกต้อง"));
         }
 
         try {
             List<String> validationErrors = dynamicValidationService.validateExcel(file);
 
             if (validationErrors.isEmpty()) {
-                return ResponseEntity.ok("ไฟล์ Excel ถูกต้อง ไม่มีข้อผิดพลาด");
+                return ResponseEntity.ok(Collections.singletonMap("message", "ไฟล์ Excel ถูกต้อง ไม่มีข้อผิดพลาด"));
             } else {
-                return ResponseEntity.ok(validationErrors);
+                return ResponseEntity.badRequest().body(Collections.singletonMap("errors", validationErrors));
             }
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("เกิดข้อผิดพลาดในการตรวจสอบไฟล์: " + e.getMessage());
+            return ResponseEntity.status(500).body(Collections.singletonMap("message", "เกิดข้อผิดพลาดในการตรวจสอบไฟล์: " + e.getMessage()));
         }
     }
 }
