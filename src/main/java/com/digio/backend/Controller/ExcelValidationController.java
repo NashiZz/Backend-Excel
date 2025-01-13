@@ -57,4 +57,29 @@ public class ExcelValidationController {
             return ResponseEntity.status(500).body(Collections.singletonMap("message", "เกิดข้อผิดพลาดในการตรวจสอบไฟล์: " + e.getMessage()));
         }
     }
+
+    @PostMapping("/headers")
+    public ResponseEntity<?> validateExcelWithSelectedHeaders(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "headers", required = false) List<String> selectedHeaders) {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("message", "โปรดอัปโหลดไฟล์ Excel ที่ถูกต้อง"));
+        }
+
+        if (selectedHeaders == null || selectedHeaders.isEmpty()) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("message", "โปรดระบุหัวข้อที่ต้องการตรวจสอบ"));
+        }
+
+        try {
+            List<String> validationErrors = dynamicValidationService.validateExcelWithSelectedHeaders(file, selectedHeaders);
+
+            if (validationErrors.isEmpty()) {
+                return ResponseEntity.ok(Collections.singletonMap("message", "ไฟล์ Excel ถูกต้อง ไม่มีข้อผิดพลาด"));
+            } else {
+                return ResponseEntity.badRequest().body(Collections.singletonMap("errors", validationErrors));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Collections.singletonMap("message", "เกิดข้อผิดพลาดในการตรวจสอบไฟล์: " + e.getMessage()));
+        }
+    }
 }

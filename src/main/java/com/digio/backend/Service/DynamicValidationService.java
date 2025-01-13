@@ -22,6 +22,65 @@ public class DynamicValidationService {
         initializeDefaultValidationRules();
     }
 
+    public List<String> validateExcelWithSelectedHeaders(MultipartFile file, List<String> selectedHeaders) {
+        Map<Integer, StringBuilder> errorMap = new TreeMap<>();
+
+        try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+            List<String> headers = extractHeaders(sheet);
+
+            List<Integer> selectedHeaderIndices = selectedHeaders.stream()
+                    .map(headers::indexOf)
+                    .filter(index -> index >= 0)
+                    .collect(Collectors.toList());
+
+            if (selectedHeaderIndices.isEmpty()) {
+                throw new IllegalArgumentException("ไม่พบหัวข้อที่เลือกในไฟล์ Excel");
+            }
+
+            for (Row row : sheet) {
+                if (row.getRowNum() == 0) continue;
+
+                StringBuilder errorBuilder = new StringBuilder();
+                validateRowWithSelectedHeaders(row, headers, selectedHeaderIndices, errorBuilder);
+
+                if (!errorBuilder.isEmpty()) {
+                    errorMap.put(row.getRowNum() + 1, errorBuilder);
+                }
+            }
+        } catch (IOException e) {
+            throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้", e);
+        }
+
+        return errorMap.entrySet().stream()
+                .map(entry -> "แถวที่ " + entry.getKey() + ": " + entry.getValue().toString())
+                .collect(Collectors.toList());
+    }
+
+    private void validateRowWithSelectedHeaders(Row row, List<String> headers, List<Integer> selectedHeaderIndices, StringBuilder errorBuilder) {
+        for (int index : selectedHeaderIndices) {
+            String header = headers.get(index);
+            String cellValue = getCellValue(row.getCell(index));
+
+            boolean matched = false;
+
+            for (Map.Entry<Pattern, Function<String, String>> entry : validationRules.entrySet()) {
+                if (entry.getKey().matcher(header).matches()) {
+                    matched = true;
+                    String error = entry.getValue().apply(cellValue);
+                    if (error != null) {
+                        appendError(errorBuilder, error);
+                    }
+                    break;
+                }
+            }
+
+            if (!matched) {
+                appendError(errorBuilder, "พบหัวข้อที่ไม่รู้จัก: " + header);
+            }
+        }
+    }
+
     public List<String> validateExcel(MultipartFile file) {
         Map<Integer, StringBuilder> errorMap = new TreeMap<>();
 
