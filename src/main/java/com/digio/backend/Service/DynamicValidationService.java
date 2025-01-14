@@ -79,6 +79,11 @@ public class DynamicValidationService {
             Sheet sheet = workbook.getSheetAt(0);
             List<String> headers = extractHeaders(sheet);
 
+            List<String> unknownHeaders = findUnknownHeaders(headers);
+            if (!unknownHeaders.isEmpty()) {
+                throw new IllegalArgumentException("พบหัวข้อที่ไม่สามารถตรวจสอบได้: " + unknownHeaders);
+            }
+
             processRows(sheet, headers, null, errorMap);
         } catch (IOException e) {
             throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้", e);
@@ -164,7 +169,7 @@ public class DynamicValidationService {
     }
 
     private void initializeDefaultValidationRules() {
-        validationRules.put(Pattern.compile("^(ชื่อ|name).*"), NameValidator::validate);
+        validationRules.put(Pattern.compile("^(ชื่อ|name|ชื่อนามสกุล|fullname).*"), NameValidator::validate);
         validationRules.put(Pattern.compile("^(อีเมล|email).*$"), EmailValidate::validate);
         validationRules.put(Pattern.compile("^(บัตรประชาชน|citizenid).*$"), CitizenIdValidator::validate);
         validationRules.put(Pattern.compile("^(เบอร์โทร|phone).*$"), PhoneValidator::validate);
@@ -198,5 +203,12 @@ public class DynamicValidationService {
                 .map(entry -> "แถวที่ " + entry.getKey() + ": " + entry.getValue().toString())
                 .collect(Collectors.toList());
     }
+
+    private List<String> findUnknownHeaders(List<String> headers) {
+        return headers.stream()
+                .filter(header -> validationRules.keySet().stream().noneMatch(pattern -> pattern.matcher(header).matches()))
+                .collect(Collectors.toList());
+    }
+
 }
 
