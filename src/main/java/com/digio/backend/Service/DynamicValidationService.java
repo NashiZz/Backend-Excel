@@ -24,31 +24,19 @@ public class DynamicValidationService {
         initializeDefaultValidationRules();
     }
 
-    private String formatDuration(long durationMillis) {
-        long seconds = durationMillis / 1000;
-        long minutes = seconds / 60;
-        long hours = minutes / 60;
-
-        if (hours > 0) {
-            return hours + " ชั่วโมง " + (minutes % 60) + " นาที";
-        } else if (minutes > 0) {
-            return minutes + " นาที " + (seconds % 60) + " วินาที";
-        } else {
-            return seconds + " วินาที";
-        }
-    }
-
     public List<String> validateExcelWithSelectedHeaders(MultipartFile file, List<String> selectedHeaders) {
         Map<Integer, StringBuilder> errorMap = new TreeMap<>();
-
-        // เริ่มจับเวลา
-        Instant startTime = Instant.now();
 
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
             List<String> headers = extractHeaders(sheet);
 
             List<Integer> selectedHeaderIndices = getSelectedHeaderIndices(headers, selectedHeaders);
+
+            List<String> unknownHeaders = findUnknownHeaders(headers);
+            if (!unknownHeaders.isEmpty()) {
+                throw new IllegalArgumentException("พบหัวข้อที่ไม่สามารถตรวจสอบได้: " + unknownHeaders);
+            }
 
             if (selectedHeaderIndices.isEmpty()) {
                 throw new IllegalArgumentException("ไม่พบหัวข้อที่เลือกในไฟล์ Excel");
@@ -59,21 +47,11 @@ public class DynamicValidationService {
             throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้", e);
         }
 
-        // จบจับเวลา
-        Instant endTime = Instant.now();
-        long durationMillis = Duration.between(startTime, endTime).toMillis();
-
-        String timeTaken = formatDuration(durationMillis);
-        System.out.println("เวลาในการประมวลผล: " + timeTaken);
-
         return formatErrorMap(errorMap);
     }
 
     public List<String> validateExcel(MultipartFile file) {
         Map<Integer, StringBuilder> errorMap = new TreeMap<>();
-
-        // เริ่มจับเวลา
-        Instant startTime = Instant.now();
 
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
@@ -88,13 +66,6 @@ public class DynamicValidationService {
         } catch (IOException e) {
             throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้", e);
         }
-
-        // จบจับเวลา
-        Instant endTime = Instant.now();
-        long durationMillis = Duration.between(startTime, endTime).toMillis();
-
-        String timeTaken = formatDuration(durationMillis);
-        System.out.println("เวลาในการประมวลผล: " + timeTaken);
 
         return formatErrorMap(errorMap);
     }
