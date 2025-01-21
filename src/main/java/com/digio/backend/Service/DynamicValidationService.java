@@ -31,12 +31,19 @@ public class DynamicValidationService {
             Sheet sheet = workbook.getSheetAt(0);
             List<String> headers = extractHeaders(sheet);
 
-            List<Integer> selectedHeaderIndices = getSelectedHeaderIndices(headers, selectedHeaders);
+            List<String> lowercaseSelectedHeaders = selectedHeaders.stream()
+                    .map(String::toLowerCase)
+                    .collect(Collectors.toList());
 
-            List<String> unknownHeaders = findUnknownHeaders(headers);
+            List<String> unknownHeaders = lowercaseSelectedHeaders.stream()
+                    .filter(header -> !headers.contains(header))
+                    .toList();
+
             if (!unknownHeaders.isEmpty()) {
-                throw new IllegalArgumentException("พบหัวข้อที่ไม่สามารถตรวจสอบได้: " + unknownHeaders);
+                throw new IllegalArgumentException("หัวข้อที่ไม่รู้จัก: " + String.join(", ", unknownHeaders));
             }
+
+            List<Integer> selectedHeaderIndices = getSelectedHeaderIndices(headers, lowercaseSelectedHeaders);
 
             if (selectedHeaderIndices.isEmpty()) {
                 throw new IllegalArgumentException("ไม่พบหัวข้อที่เลือกในไฟล์ Excel");
@@ -145,6 +152,8 @@ public class DynamicValidationService {
         validationRules.put(Pattern.compile("^(บัตรประชาชน|citizenid).*$"), CitizenIdValidator::validate);
         validationRules.put(Pattern.compile("^(เบอร์โทร|phone).*$"), PhoneValidator::validate);
         validationRules.put(Pattern.compile("^(ที่อยู่|address).*$"), AddressValidator::validate);
+        validationRules.put(Pattern.compile("^(อายุ|age).*$"), AgeValidator::validateDateOfBirth);
+        validationRules.put(Pattern.compile("^(เพศ|gender).*$"), GenderValidator::validateGender);
     }
 
     private String getCellValue(Cell cell) {
