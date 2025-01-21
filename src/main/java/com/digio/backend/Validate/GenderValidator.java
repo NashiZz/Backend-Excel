@@ -12,7 +12,7 @@ public class GenderValidator {
         if (gender == null || gender.trim().isEmpty()) {
             return "เพศไม่ควรว่าง";
         } else if (!VALID_GENDER_VALUES.contains(gender.trim())) {
-            return "เพศไม่ถูกต้อง กรุณากรอก 'ชาย', 'หญิง', หรือ 'ไม่ระบุ'";
+            return "เพศไม่ถูกต้อง";
         }
 
         return null;

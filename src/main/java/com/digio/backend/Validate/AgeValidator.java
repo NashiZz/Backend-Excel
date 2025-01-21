@@ -14,7 +14,7 @@ public class AgeValidator {
 
         LocalDate birthLocalDate = parseDate(dob);
         if (birthLocalDate == null) {
-            return "รูปแบบวันเกิดไม่ถูกต้อง ควรเป็น yyyy-MM-dd หรือ dd/MM/yyyy";
+            return "รูปแบบวันเกิดไม่ถูกต้อง";
         }
 
         if (birthLocalDate.isAfter(LocalDate.now())) {
