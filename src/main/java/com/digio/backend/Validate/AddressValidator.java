@@ -8,56 +8,32 @@ public class AddressValidator {
     private static final List<String> INVALID_KEYWORDS = List.of("unknown", "invalid", "n/a", "not specified");
 
     public static String validate(String address) {
-        if (isNullOrEmpty(address)) {
+        if (address == null || address.isBlank()) {
             return "ที่อยู่ไม่ควรว่าง";
         }
 
         String trimmedAddress = address.trim().toLowerCase();
 
-        if (containsInvalidKeywords(trimmedAddress)) {
+        if (INVALID_KEYWORDS.stream().anyMatch(trimmedAddress::contains)) {
             return "ที่อยู่ไม่ถูกต้อง";
         }
 
-        if (trimmedAddress.length() > MAX_ADDRESS_LENGTH) {
-            return "ที่อยู่ยาวเกินไป";
+        if (trimmedAddress.length() < MIN_ADDRESS_LENGTH || trimmedAddress.length() > MAX_ADDRESS_LENGTH) {
+            return "ที่อยู่ควรมีความยาวหรือสั้นเกินไป";
         }
 
-        if (trimmedAddress.length() < MIN_ADDRESS_LENGTH) {
-            return "ที่อยู่สั้นเกินไป";
-        }
-
-        if (hasRepeatedCharacters(trimmedAddress)) {
+        if (trimmedAddress.matches(".*(.)\\1{4,}.*")) {
             return "ที่อยู่ไม่ควรมีตัวอักษรหรือตัวเลขซ้ำกัน";
         }
 
-        if (hasSpecialCharacters(trimmedAddress)) {
+        if (trimmedAddress.matches(".*[<>#&@].*")) {
             return "ที่อยู่ไม่ควรมีอักขระพิเศษ";
         }
 
-        if (!isValidFormat(trimmedAddress)) {
+        if (!trimmedAddress.matches("^[ก-๙A-Za-z0-9\\s,.-/]+$")) {
             return "รูปแบบที่อยู่ไม่ถูกต้อง";
         }
 
         return "success";
-    }
-
-    private static boolean isNullOrEmpty(String address) {
-        return address == null || address.trim().isEmpty();
-    }
-
-    private static boolean containsInvalidKeywords(String address) {
-        return INVALID_KEYWORDS.stream().anyMatch(address::contains);
-    }
-
-    private static boolean hasRepeatedCharacters(String address) {
-        return address.matches(".*(.)\\1{4,}.*");
-    }
-
-    private static boolean hasSpecialCharacters(String address) {
-        return address.matches(".*[<>#&@].*");
-    }
-
-    private static boolean isValidFormat(String address) {
-        return address.matches("^[ก-๙A-Za-z0-9\\s,.-/]+$");
     }
 }
