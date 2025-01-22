@@ -45,11 +45,6 @@
 			<version>1.7</version>
 		</dependency>
 		<dependency>
-			<groupId>com.digio</groupId>
-			<artifactId>validator_excel</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
-		</dependency>
-		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi</artifactId>
 			<version>5.3.0</version>
@@ -86,7 +81,8 @@
 		</dependency>
 		<dependency>
 			<groupId>org.mockito</groupId>
-			<artifactId>mockito-core</artifactId>
+			<artifactId>mockito-inline</artifactId>
+			<version>5.2.0</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
@@ -103,6 +99,7 @@
 							<artifactId>lombok</artifactId>
 						</path>
 					</annotationProcessorPaths>
+					<fork>true</fork>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -110,7 +107,9 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>3.1.2</version>
 				<configuration>
-					<argLine>-javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/1.15.11/byte-buddy-agent-1.15.11.jar</argLine>
+					<argLine>
+						-javaagent:${settings.localRepository}/org/mockito/mockito-core/5.14.2/mockito-core-5.14.2.jar
+					</argLine>
 				</configuration>
 			</plugin>
 			<plugin>

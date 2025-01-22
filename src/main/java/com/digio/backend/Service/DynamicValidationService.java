@@ -57,6 +57,10 @@ public class DynamicValidationService {
     public List<String> validateExcel(MultipartFile file) {
         Map<Integer, StringBuilder> errorMap = new TreeMap<>();
 
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้: ไฟล์ว่างเปล่า");
+        }
+
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
             List<String> headers = extractHeaders(sheet);
@@ -68,7 +72,7 @@ public class DynamicValidationService {
 
             processRows(sheet, headers, null, errorMap);
         } catch (IOException e) {
-            throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้", e);
+            throw new RuntimeException("เกิดข้อผิดพลาดในการอ่านไฟล์ Excel: " + e.getMessage(), e);
         }
 
         return formatErrorMap(errorMap);
@@ -130,7 +134,7 @@ public class DynamicValidationService {
                 .anyMatch(entry -> {
                     if (entry.getKey().matcher(header).matches()) {
                         String error = entry.getValue().apply(cellValue);
-                        if (error != null) {
+                        if (error != null && !error.equals("success")) {
                             appendError(errorBuilder, error);
                         }
                         return true;
@@ -142,6 +146,7 @@ public class DynamicValidationService {
             appendError(errorBuilder, "พบหัวข้อที่ไม่รู้จัก: " + header);
         }
     }
+
 
     private void initializeDefaultValidationRules() {
         validationRules.put(Pattern.compile("^(ชื่อ|name|ชื่อนามสกุล|fullname).*"), NameValidator::validate);

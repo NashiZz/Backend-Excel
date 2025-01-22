@@ -30,7 +30,7 @@ public class NameValidator {
         }
 
         if (!NAME_PATTERN.matcher(trimmedName).matches()) {
-            return "ชื่อควรมีเฉพาะตัวอักษรไทยหรือภาษาอังกฤษ และไม่มีอักขระพิเศษ";
+            return "ชื่อควรมีเฉพาะตัวอักษรไทยหรือภาษาอังกฤษ";
         }
 
         String[] nameParts = trimmedName.split("\\s+");
