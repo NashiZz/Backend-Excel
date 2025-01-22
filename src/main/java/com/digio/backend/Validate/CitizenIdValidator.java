@@ -2,15 +2,19 @@ package com.digio.backend.Validate;
 
 public class CitizenIdValidator {
     public static String validate(String citizenId) {
-        if (citizenId == null || !citizenId.matches("^\\d{13}$")) {
+        if (citizenId == null || citizenId.isEmpty()) {
             return "บัตรประชาชนไม่ถูกต้อง";
         }
 
-//        if (!isValidCitizenId(citizenId)) {
-//            return "บัตรประชาชนไม่ถูกต้อง";
-//        }
+        if (!citizenId.matches("^\\d{13}$")) {
+            return "บัตรประชาชนไม่ถูกต้อง";
+        }
 
-        return null;
+        if (!isValidCitizenId(citizenId)) {
+            return "บัตรประชาชนไม่ถูกต้อง";
+        }
+
+        return "success";
     }
 
     private static boolean isValidCitizenId(String citizenId) {
@@ -24,4 +28,5 @@ public class CitizenIdValidator {
         return checkDigit == lastDigit;
     }
 }
+
 

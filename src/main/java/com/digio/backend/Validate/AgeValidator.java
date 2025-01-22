@@ -26,7 +26,7 @@ public class AgeValidator {
             return "อายุไม่ถึงขั้นต่ำที่กำหนด (ต้องมีอายุอย่างน้อย 18 ปี)";
         }
 
-        return null;
+        return "success";
     }
 
     private static LocalDate parseDate(String dob) {

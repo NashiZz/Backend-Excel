@@ -8,13 +8,13 @@ public class AddressValidator {
     private static final List<String> INVALID_KEYWORDS = List.of("unknown", "invalid", "n/a", "not specified");
 
     public static String validate(String address) {
-        if (address == null || address.trim().isEmpty()) {
+        if (isNullOrEmpty(address)) {
             return "ที่อยู่ไม่ควรว่าง";
         }
 
         String trimmedAddress = address.trim().toLowerCase();
 
-        if (INVALID_KEYWORDS.stream().anyMatch(trimmedAddress::contains)) {
+        if (containsInvalidKeywords(trimmedAddress)) {
             return "ที่อยู่ไม่ถูกต้อง";
         }
 
@@ -26,18 +26,38 @@ public class AddressValidator {
             return "ที่อยู่สั้นเกินไป";
         }
 
-        if (trimmedAddress.matches(".*(.)\\1{4,}.*")) {
+        if (hasRepeatedCharacters(trimmedAddress)) {
             return "ที่อยู่ไม่ควรมีตัวอักษรหรือตัวเลขซ้ำกัน";
         }
 
-        if (trimmedAddress.matches(".*[<>#&@].*")) {
+        if (hasSpecialCharacters(trimmedAddress)) {
             return "ที่อยู่ไม่ควรมีอักขระพิเศษ";
         }
 
-        if (!trimmedAddress.matches("^[ก-๙A-Za-z0-9\\s,.-/]+$")) {
+        if (!isValidFormat(trimmedAddress)) {
             return "รูปแบบที่อยู่ไม่ถูกต้อง";
         }
 
-        return null;
+        return "success";
+    }
+
+    private static boolean isNullOrEmpty(String address) {
+        return address == null || address.trim().isEmpty();
+    }
+
+    private static boolean containsInvalidKeywords(String address) {
+        return INVALID_KEYWORDS.stream().anyMatch(address::contains);
+    }
+
+    private static boolean hasRepeatedCharacters(String address) {
+        return address.matches(".*(.)\\1{4,}.*");
+    }
+
+    private static boolean hasSpecialCharacters(String address) {
+        return address.matches(".*[<>#&@].*");
+    }
+
+    private static boolean isValidFormat(String address) {
+        return address.matches("^[ก-๙A-Za-z0-9\\s,.-/]+$");
     }
 }

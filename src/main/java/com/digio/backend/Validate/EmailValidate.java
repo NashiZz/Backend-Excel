@@ -9,7 +9,7 @@ public class EmailValidate {
         if (email == null || !EmailValidator.getInstance().isValid(email) || email.length() > MAX_NAME_LENGTH) {
             return "อีเมลไม่ถูกต้อง";
         }
-        return null;
+        return "success";
     }
 }
 
