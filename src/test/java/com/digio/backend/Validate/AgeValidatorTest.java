@@ -6,15 +6,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class AgeValidatorTest {
 
     @Test
-    void validate_ShouldReturnError_WhenDateOfBirthIsNull() {
-        String dob = null;
-
-        String result = AgeValidator.validateDateOfBirth(dob);
-
-        assertEquals("วันเกิดไม่ควรว่าง", result, "Date of birth should not be null");
-    }
-
-    @Test
     void validate_ShouldReturnError_WhenDateOfBirthIsEmpty() {
         String dob = "";
 

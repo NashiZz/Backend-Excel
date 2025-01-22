@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 @Service
@@ -22,60 +21,50 @@ public class DynamicValidationService {
     }
 
     public List<String> validateExcelWithSelectedHeaders(MultipartFile file, List<String> selectedHeaders) {
-        Map<Integer, StringBuilder> errorMap = new TreeMap<>();
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("ไฟล์ว่างเปล่า ไม่สามารถอ่านข้อมูลได้");
+        }
 
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
             List<String> headers = extractHeaders(sheet);
 
-            List<String> lowercaseSelectedHeaders = selectedHeaders.stream()
-                    .map(String::toLowerCase)
-                    .collect(Collectors.toList());
-
-            List<String> unknownHeaders = lowercaseSelectedHeaders.stream()
-                    .filter(header -> !headers.contains(header))
-                    .toList();
-
-            if (!unknownHeaders.isEmpty()) {
-                throw new IllegalArgumentException("หัวข้อที่ไม่รู้จัก: " + String.join(", ", unknownHeaders));
+            if (!hasDataInRows(sheet)) {
+                throw new IllegalArgumentException("ไฟล์นี้ไม่มีข้อมูล");
             }
 
-            List<Integer> selectedHeaderIndices = getSelectedHeaderIndices(headers, lowercaseSelectedHeaders);
+            validateUnknown(selectedHeaders, headers);
 
-            if (selectedHeaderIndices.isEmpty()) {
+            List<Integer> selectedIndices = getHeaderIndices(headers, selectedHeaders);
+            if (selectedIndices.isEmpty()) {
                 throw new IllegalArgumentException("ไม่พบหัวข้อที่เลือกในไฟล์ Excel");
             }
 
-            processRows(sheet, headers, selectedHeaderIndices, errorMap);
+            return processRows(sheet, headers, selectedIndices);
         } catch (IOException e) {
             throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้", e);
         }
-
-        return formatErrorMap(errorMap);
     }
 
     public List<String> validateExcel(MultipartFile file) {
-        Map<Integer, StringBuilder> errorMap = new TreeMap<>();
-
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้: ไฟล์ว่างเปล่า");
+            throw new IllegalArgumentException("ไฟล์ว่างเปล่า ไม่สามารถอ่านข้อมูลได้");
         }
 
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
             List<String> headers = extractHeaders(sheet);
 
-            List<String> unknownHeaders = findUnknownHeaders(headers);
-            if (!unknownHeaders.isEmpty()) {
-                throw new IllegalArgumentException("พบหัวข้อที่ไม่สามารถตรวจสอบได้: " + unknownHeaders);
+            if (!hasDataInRows(sheet)) {
+                throw new IllegalArgumentException("ไฟล์นี้ไม่มีข้อมูล");
             }
 
-            processRows(sheet, headers, null, errorMap);
-        } catch (IOException e) {
-            throw new RuntimeException("เกิดข้อผิดพลาดในการอ่านไฟล์ Excel: " + e.getMessage(), e);
-        }
+            validateUnknownHeaders(headers);
 
-        return formatErrorMap(errorMap);
+            return processRows(sheet, headers, null);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้", e);
+        }
     }
 
     private List<String> extractHeaders(Sheet sheet) {
@@ -84,69 +73,134 @@ public class DynamicValidationService {
             throw new IllegalArgumentException("ไม่มีแถวหัวข้อในไฟล์ Excel");
         }
 
-        return StreamSupport.stream(headerRow.spliterator(), false)
-                .map(cell -> cell.getStringCellValue().trim().toLowerCase())
-                .collect(Collectors.toList());
+        return StreamSupport.stream(
+                    Spliterators.spliteratorUnknownSize(headerRow.cellIterator(), Spliterator.ORDERED), false
+                )
+                .map(this::getCellValue)
+                .filter(Objects::nonNull)
+                .map(String::toLowerCase)
+                .toList();
     }
 
-    private List<Integer> getSelectedHeaderIndices(List<String> headers, List<String> selectedHeaders) {
-        return selectedHeaders.stream()
-                .map(headers::indexOf)
+    private List<Integer> getHeaderIndices(List<String> headers, List<String> selectedHeaders) {
+        List<String> lowerHeaders = headers.stream().map(String::toLowerCase).toList();
+        List<String> lowerSelected = selectedHeaders.stream().map(String::toLowerCase).toList();
+
+        return lowerSelected.stream()
+                .map(lowerHeaders::indexOf)
                 .filter(index -> index >= 0)
-                .collect(Collectors.toList());
+                .toList();
     }
 
-    private void processRows(Sheet sheet, List<String> headers, List<Integer> selectedHeaderIndices, Map<Integer, StringBuilder> errorMap) {
+    private List<String> processRows(Sheet sheet, List<String> headers, List<Integer> selectedIndices) {
+        Map<Integer, String> errorMap = new TreeMap<>();
+
         for (Row row : sheet) {
             if (row.getRowNum() == 0) continue;
 
             StringBuilder errorBuilder = new StringBuilder();
-            if (selectedHeaderIndices != null) {
-                validateRowWithSelectedHeaders(row, headers, selectedHeaderIndices, errorBuilder);
+            if (selectedIndices != null) {
+                validateRowWithIndices(row, headers, selectedIndices, errorBuilder);
             } else {
                 validateRow(row, headers, errorBuilder);
             }
 
             if (!errorBuilder.isEmpty()) {
-                errorMap.put(row.getRowNum() + 1, errorBuilder);
+                errorMap.put(row.getRowNum() + 1, errorBuilder.toString());
             }
         }
+
+        return formatErrorMessages(errorMap);
     }
 
-    private void validateRowWithSelectedHeaders(Row row, List<String> headers, List<Integer> selectedHeaderIndices, StringBuilder errorBuilder) {
-        selectedHeaderIndices.forEach(index -> {
-            String header = headers.get(index);
-            String cellValue = getCellValue(row.getCell(index));
-            applyValidationRules(header, cellValue, errorBuilder);
-        });
+    private void validateRowWithIndices(Row row, List<String> headers, List<Integer> selectedIndices, StringBuilder errorBuilder) {
+        for (int index : selectedIndices) {
+            validateCell(headers.get(index), getCellValue(row.getCell(index)), errorBuilder);
+        }
     }
 
     private void validateRow(Row row, List<String> headers, StringBuilder errorBuilder) {
         for (int i = 0; i < headers.size(); i++) {
             String header = headers.get(i);
             String cellValue = getCellValue(row.getCell(i));
-            applyValidationRules(header, cellValue, errorBuilder);
+            validateCell(header, cellValue, errorBuilder);
         }
     }
 
-    private void applyValidationRules(String header, String cellValue, StringBuilder errorBuilder) {
-        boolean matched = validationRules.entrySet().stream()
-                .anyMatch(entry -> {
-                    if (entry.getKey().matcher(header).matches()) {
-                        String error = entry.getValue().apply(cellValue);
-                        if (error != null && !error.equals("success")) {
-                            appendError(errorBuilder, error);
-                        }
+
+    private void validateCell(String header, String cellValue, StringBuilder errorBuilder) {
+        validationRules.entrySet().stream()
+                .filter(entry -> entry.getKey().matcher(header).matches())
+                .findFirst()
+                .ifPresentOrElse(
+                        entry -> appendError(errorBuilder, entry.getValue().apply(cellValue)),
+                        () -> appendError(errorBuilder, "พบหัวข้อที่ไม่รู้จัก: " + header)
+                );
+    }
+
+    private void validateUnknown(List<String> selectedHeaders, List<String> headers) {
+        List<String> lowerHeaders = headers.stream().map(String::toLowerCase).toList();
+        List<String> lowerSelectedHeaders = selectedHeaders.stream().map(String::toLowerCase).toList();
+
+        List<String> unknownHeaders = lowerSelectedHeaders.stream()
+                .filter(header -> validationRules.keySet().stream().noneMatch(pattern -> pattern.matcher(header).matches()))
+                .toList();
+
+        if (!unknownHeaders.isEmpty()) {
+            throw new IllegalArgumentException("พบหัวข้อที่ไม่สามารถตรวจสอบได้: " + String.join(", ", unknownHeaders));
+        }
+    }
+
+    private void validateUnknownHeaders(List<String> headers) {
+        List<String> unknownHeaders = headers.stream()
+                .filter(header -> validationRules.keySet().stream().noneMatch(pattern -> pattern.matcher(header).matches()))
+                .toList();
+
+        if (!unknownHeaders.isEmpty()) {
+            throw new IllegalArgumentException("พบหัวข้อที่ไม่รู้จัก: " + String.join(", ", unknownHeaders));
+        }
+    }
+
+    private String getCellValue(Cell cell) {
+        if (cell == null) return null;
+
+        return switch (cell.getCellType()) {
+            case STRING -> cell.getStringCellValue().trim();
+            case NUMERIC -> String.valueOf((long) cell.getNumericCellValue());
+            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+            default -> null;
+        };
+    }
+
+    private void appendError(StringBuilder errorBuilder, String error) {
+        if (error != null && !error.equals("success")) {
+            if (!errorBuilder.isEmpty()) {
+                errorBuilder.append(", ");
+            }
+            errorBuilder.append(error);
+        }
+    }
+
+    private List<String> formatErrorMessages(Map<Integer, String> errorMap) {
+        return errorMap.entrySet().stream()
+                .map(entry -> "แถวที่ " + entry.getKey() + ": " + entry.getValue())
+                .toList();
+    }
+
+
+    private boolean hasDataInRows(Sheet sheet) {
+        for (int rowIndex = 1; rowIndex < sheet.getPhysicalNumberOfRows(); rowIndex++) {
+            Row row = sheet.getRow(rowIndex);
+            if (row != null) {
+                for (Cell cell : row) {
+                    if (cell != null && !getCellValue(cell).trim().isEmpty()) {
                         return true;
                     }
-                    return false;
-                });
-
-        if (!matched) {
-            appendError(errorBuilder, "พบหัวข้อที่ไม่รู้จัก: " + header);
+                }
+            }
         }
+        return false;
     }
-
 
     private void initializeDefaultValidationRules() {
         validationRules.put(Pattern.compile("^(ชื่อ|name|ชื่อนามสกุล|fullname).*"), NameValidator::validate);
@@ -157,40 +211,5 @@ public class DynamicValidationService {
         validationRules.put(Pattern.compile("^(อายุ|age).*$"), AgeValidator::validateDateOfBirth);
         validationRules.put(Pattern.compile("^(เพศ|gender).*$"), GenderValidator::validateGender);
     }
-
-    private String getCellValue(Cell cell) {
-        if (cell == null) return null;
-
-        switch (cell.getCellType()) {
-            case STRING:
-                return cell.getStringCellValue().trim();
-            case NUMERIC:
-                return String.valueOf((long) cell.getNumericCellValue());
-            case BOOLEAN:
-                return String.valueOf(cell.getBooleanCellValue());
-            default:
-                return null;
-        }
-    }
-
-    private void appendError(StringBuilder errorBuilder, String errorMessage) {
-        if (!errorBuilder.isEmpty()) {
-            errorBuilder.append(", ");
-        }
-        errorBuilder.append(errorMessage);
-    }
-
-    private List<String> formatErrorMap(Map<Integer, StringBuilder> errorMap) {
-        return errorMap.entrySet().stream()
-                .map(entry -> "แถวที่ " + entry.getKey() + ": " + entry.getValue().toString())
-                .collect(Collectors.toList());
-    }
-
-    private List<String> findUnknownHeaders(List<String> headers) {
-        return headers.stream()
-                .filter(header -> validationRules.keySet().stream().noneMatch(pattern -> pattern.matcher(header).matches()))
-                .collect(Collectors.toList());
-    }
-
 }
 

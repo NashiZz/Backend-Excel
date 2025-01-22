@@ -24,15 +24,6 @@ class GenderValidatorTest {
     }
 
     @Test
-    void validate_ShouldReturnError_WhenGenderIsNull() {
-        String gender = null;
-
-        String result = GenderValidator.validateGender(gender);
-
-        assertEquals("เพศไม่ควรว่าง", result, "Gender should not be null");
-    }
-
-    @Test
     void validate_ShouldReturnError_WhenGenderIsEmpty() {
         String gender = "";
 

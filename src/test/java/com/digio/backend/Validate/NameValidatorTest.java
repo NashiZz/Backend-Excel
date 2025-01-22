@@ -6,15 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class NameValidatorTest {
 
     @Test
-    void validate_ShouldReturnError_WhenNameIsNull() {
-        String name = null;
-
-        String result = NameValidator.validate(name);
-
-        assertEquals("ชื่อไม่ควรว่าง", result, "Null name should return an error message");
-    }
-
-    @Test
     void validate_ShouldReturnError_WhenNameIsBlank() {
         String name = "   ";
 

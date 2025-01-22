@@ -60,7 +60,7 @@ public class DynamicValidationServiceTest {
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
                 dynamicCheckingService.validateExcelWithSelectedHeaders(validFile, List.of("วันเกิด")));
-        assertEquals("หัวข้อที่ไม่รู้จัก: วันเกิด", exception.getMessage());
+        assertEquals("ไม่พบหัวข้อที่เลือกในไฟล์ Excel", exception.getMessage());
     }
 
     @Test
@@ -69,7 +69,7 @@ public class DynamicValidationServiceTest {
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
                 dynamicCheckingService.validateExcel(emptyFile));
-        assertEquals("ไม่สามารถอ่านไฟล์ Excel ได้: ไฟล์ว่างเปล่า", exception.getMessage());
+        assertEquals("ไฟล์ว่างเปล่า ไม่สามารถอ่านข้อมูลได้", exception.getMessage());
     }
 
     private MockMultipartFile createExcelFile(String[][] data) throws Exception {

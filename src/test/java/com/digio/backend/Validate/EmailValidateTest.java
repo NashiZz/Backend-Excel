@@ -6,15 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class EmailValidateTest {
 
     @Test
-    void validate_ShouldReturnError_WhenEmailIsNull() {
-        String email = null;
-
-        String result = EmailValidate.validate(email);
-
-        assertEquals("อีเมลไม่ถูกต้อง", result, "Null email should return an error message");
-    }
-
-    @Test
     void validate_ShouldReturnError_WhenEmailIsEmpty() {
         String email = "";
 

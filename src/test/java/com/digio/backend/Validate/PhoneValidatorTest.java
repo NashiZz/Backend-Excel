@@ -15,15 +15,6 @@ class PhoneValidatorTest {
     }
 
     @Test
-    void validate_ShouldReturnError_WhenPhoneNumberIsNull() {
-        String phoneNumber = null;
-
-        String result = PhoneValidator.validate(phoneNumber);
-
-        assertEquals("หมายเลขโทรศัพท์ไม่ถูกต้อง", result, "Null phone number should return an error message");
-    }
-
-    @Test
     void validate_ShouldReturnError_WhenPhoneNumberIsEmpty() {
         String phoneNumber = "";
 

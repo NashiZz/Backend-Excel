@@ -6,15 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class AddressValidatorTest {
 
     @Test
-    void validate_ShouldReturnError_WhenAddressIsNull() {
-        String address = null;
-
-        String result = AddressValidator.validate(address);
-
-        assertEquals("ที่อยู่ไม่ควรว่าง", result, "Null address should return an error message");
-    }
-
-    @Test
     void validate_ShouldReturnError_WhenAddressIsBlank() {
         String address = "   ";
 

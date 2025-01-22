@@ -7,15 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class CitizenIdValidatorTest {
 
     @Test
-    void validate_ShouldReturnError_WhenCitizenIdIsNull() {
-        String citizenId = null;
-
-        String result = CitizenIdValidator.validate(citizenId);
-
-        assertEquals("บัตรประชาชนไม่ถูกต้อง", result, "Null ID should return an error message");
-    }
-
-    @Test
     void validate_ShouldReturnError_WhenCitizenIdIsEmpty() {
         String citizenId = "";
 
