@@ -1,7 +1,6 @@
 package com.digio.backend.Validate;
 
 import java.time.LocalDate;
-import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
@@ -12,8 +11,10 @@ public class AgeValidator {
             return "วันเกิดไม่ควรว่าง";
         }
 
-        LocalDate birthLocalDate = parseDate(dob);
-        if (birthLocalDate == null) {
+        LocalDate birthLocalDate;
+        try {
+            birthLocalDate = parseDate(dob);
+        } catch (IllegalArgumentException e) {
             return "รูปแบบวันเกิดไม่ถูกต้อง";
         }
 
@@ -21,7 +22,7 @@ public class AgeValidator {
             return "วันเกิดไม่สามารถเป็นวันที่ในอนาคต";
         }
 
-        int age = Period.between(birthLocalDate, LocalDate.now()).getYears();
+        int age = java.time.Period.between(birthLocalDate, LocalDate.now()).getYears();
         if (age < 18) {
             return "อายุไม่ถึงขั้นต่ำที่กำหนด (ต้องมีอายุอย่างน้อย 18 ปี)";
         }
@@ -39,8 +40,10 @@ public class AgeValidator {
             try {
                 return LocalDate.parse(dob, formatter);
             } catch (DateTimeParseException ignored) {
+
             }
         }
-        return null;
+
+        throw new IllegalArgumentException("วันเกิดมีรูปแบบไม่ถูกต้อง");
     }
 }

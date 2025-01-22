@@ -14,6 +14,10 @@ public class AddressValidator {
 
         String trimmedAddress = address.trim().toLowerCase();
 
+        if (!trimmedAddress.matches("^[ก-๙A-Za-z0-9\\s,.-/]+$") || trimmedAddress.matches(".*[<>#&@!].*")) {
+            return "รูปแบบที่อยู่ไม่ถูกต้อง";
+        }
+
         if (INVALID_KEYWORDS.stream().anyMatch(trimmedAddress::contains)) {
             return "ที่อยู่ไม่ถูกต้อง";
         }
@@ -24,14 +28,6 @@ public class AddressValidator {
 
         if (trimmedAddress.matches(".*(.)\\1{4,}.*")) {
             return "ที่อยู่ไม่ควรมีตัวอักษรหรือตัวเลขซ้ำกัน";
-        }
-
-        if (trimmedAddress.matches(".*[<>#&@].*")) {
-            return "ที่อยู่ไม่ควรมีอักขระพิเศษ";
-        }
-
-        if (!trimmedAddress.matches("^[ก-๙A-Za-z0-9\\s,.-/]+$")) {
-            return "รูปแบบที่อยู่ไม่ถูกต้อง";
         }
 
         return "success";

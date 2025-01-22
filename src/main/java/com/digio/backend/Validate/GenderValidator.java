@@ -5,16 +5,21 @@ import java.util.List;
 
 public class GenderValidator {
 
-    private static final List<String> VALID_GENDER_VALUES = Arrays.asList("ชาย", "หญิง", "ไม่ระบุ");
+    private static List<String> validGenders;
+
+    static {
+        validGenders = Arrays.asList("ชาย", "หญิง", "เพศที่สาม", "ทรานส์เจนเดอร์", "ไม่ระบุ");
+    }
 
     public static String validateGender(String gender) {
-
         if (gender == null || gender.trim().isEmpty()) {
             return "เพศไม่ควรว่าง";
-        } else if (!VALID_GENDER_VALUES.contains(gender.trim())) {
-            return "เพศไม่ถูกต้อง";
         }
 
-        return "success";
+        if (validGenders.contains(gender.trim())) {
+            return "success";
+        } else {
+            return "เพศไม่ถูกต้อง";
+        }
     }
 }
