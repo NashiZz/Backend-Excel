@@ -60,7 +60,7 @@ public class DynamicValidationServiceTest {
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
                 dynamicCheckingService.validateExcelWithSelectedHeaders(validFile, List.of("วันเกิด")));
-        assertEquals("ไม่พบหัวข้อที่เลือกในไฟล์ Excel", exception.getMessage());
+        assertEquals("พบหัวข้อที่ไม่สามารถตรวจสอบได้: วันเกิด", exception.getMessage());
     }
 
     @Test

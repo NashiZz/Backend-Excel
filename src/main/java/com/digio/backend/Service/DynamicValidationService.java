@@ -20,7 +20,7 @@ public class DynamicValidationService {
         initializeDefaultValidationRules();
     }
 
-    public List<String> validateExcelWithSelectedHeaders(MultipartFile file, List<String> selectedHeaders) {
+    public List<Map<String, Object>> validateExcelWithSelectedHeaders(MultipartFile file, List<String> selectedHeaders) {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("ไฟล์ว่างเปล่า ไม่สามารถอ่านข้อมูลได้");
         }
@@ -29,7 +29,7 @@ public class DynamicValidationService {
             Sheet sheet = workbook.getSheetAt(0);
             List<String> headers = extractHeaders(sheet);
 
-            if (!hasDataInRows(sheet)) {
+            if (isRowsEmpty(sheet)) {
                 throw new IllegalArgumentException("ไฟล์นี้ไม่มีข้อมูล");
             }
 
@@ -46,7 +46,7 @@ public class DynamicValidationService {
         }
     }
 
-    public List<String> validateExcel(MultipartFile file) {
+    public List<Map<String, Object>> validateExcel(MultipartFile file) {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("ไฟล์ว่างเปล่า ไม่สามารถอ่านข้อมูลได้");
         }
@@ -55,7 +55,7 @@ public class DynamicValidationService {
             Sheet sheet = workbook.getSheetAt(0);
             List<String> headers = extractHeaders(sheet);
 
-            if (!hasDataInRows(sheet)) {
+            if (isRowsEmpty(sheet)) {
                 throw new IllegalArgumentException("ไฟล์นี้ไม่มีข้อมูล");
             }
 
@@ -74,7 +74,7 @@ public class DynamicValidationService {
         }
 
         return StreamSupport.stream(
-                    Spliterators.spliteratorUnknownSize(headerRow.cellIterator(), Spliterator.ORDERED), false
+                        Spliterators.spliteratorUnknownSize(headerRow.cellIterator(), Spliterator.ORDERED), false
                 )
                 .map(this::getCellValue)
                 .filter(Objects::nonNull)
@@ -92,25 +92,40 @@ public class DynamicValidationService {
                 .toList();
     }
 
-    private List<String> processRows(Sheet sheet, List<String> headers, List<Integer> selectedIndices) {
-        Map<Integer, String> errorMap = new TreeMap<>();
+    private List<Map<String, Object>> processRows(Sheet sheet, List<String> headers, List<Integer> selectedIndices) {
+        List<Map<String, Object>> errorList = new ArrayList<>();
 
         for (Row row : sheet) {
-            if (row.getRowNum() == 0) continue;
+            if (row.getRowNum() == 0) continue; // ข้ามแถวหัวข้อ
 
-            StringBuilder errorBuilder = new StringBuilder();
-            if (selectedIndices != null) {
-                validateRowWithIndices(row, headers, selectedIndices, errorBuilder);
-            } else {
-                validateRow(row, headers, errorBuilder);
-            }
+            for (int i = 0; i < headers.size(); i++) {
+                if (selectedIndices != null && !selectedIndices.contains(i)) continue;
 
-            if (!errorBuilder.isEmpty()) {
-                errorMap.put(row.getRowNum() + 1, errorBuilder.toString());
+                String header = headers.get(i);
+                String cellValue = getCellValue(row.getCell(i));
+
+                String errorMessage = validateCellAndGetMessage(header, cellValue);
+                if (errorMessage != null && !errorMessage.equals("success")) {
+                    Map<String, Object> errorDetails = new HashMap<>();
+                    errorDetails.put("row", row.getRowNum()); // Row เริ่มจาก 1
+                    errorDetails.put("column", i); // Column เริ่มจาก 1
+                    errorDetails.put("header", header); // ชื่อหัวข้อของคอลัมน์
+                    errorDetails.put("message", errorMessage);
+
+                    errorList.add(errorDetails);
+                }
             }
         }
 
-        return formatErrorMessages(errorMap);
+        return errorList;
+    }
+
+    private String validateCellAndGetMessage(String header, String cellValue) {
+        return validationRules.entrySet().stream()
+                .filter(entry -> entry.getKey().matcher(header).matches())
+                .findFirst()
+                .map(entry -> entry.getValue().apply(cellValue))
+                .orElse("ไม่สามารถตรวจสอบหัวข้อนี้ได้: " + header);
     }
 
     private void validateRowWithIndices(Row row, List<String> headers, List<Integer> selectedIndices, StringBuilder errorBuilder) {
@@ -188,18 +203,18 @@ public class DynamicValidationService {
     }
 
 
-    private boolean hasDataInRows(Sheet sheet) {
+    private boolean isRowsEmpty(Sheet sheet) {
         for (int rowIndex = 1; rowIndex < sheet.getPhysicalNumberOfRows(); rowIndex++) {
             Row row = sheet.getRow(rowIndex);
             if (row != null) {
                 for (Cell cell : row) {
                     if (cell != null && !getCellValue(cell).trim().isEmpty()) {
-                        return true;
+                        return false;
                     }
                 }
             }
         }
-        return false;
+        return true;
     }
 
     private void initializeDefaultValidationRules() {

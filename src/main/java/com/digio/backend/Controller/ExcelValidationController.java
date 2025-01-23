@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/excel")
@@ -27,7 +28,7 @@ public class ExcelValidationController {
         if (fileValidation != null) return fileValidation;
 
         try {
-            List<String> validationErrors = dynamicValidationService.validateExcel(file);
+            List<Map<String, Object>> validationErrors = dynamicValidationService.validateExcel(file);
             return validationErrors.isEmpty() ?
                     ResponseEntity.ok(Collections.singletonMap("message", "ไฟล์ Excel ถูกต้อง ไม่มีข้อผิดพลาด")) :
                     ResponseEntity.badRequest().body(Collections.singletonMap("errors", validationErrors));
@@ -48,7 +49,7 @@ public class ExcelValidationController {
         }
 
         try {
-            List<String> validationErrors = dynamicValidationService.validateExcelWithSelectedHeaders(file, selectedHeaders);
+            List<Map<String, Object>> validationErrors = dynamicValidationService.validateExcelWithSelectedHeaders(file, selectedHeaders);
             return validationErrors.isEmpty() ?
                     ResponseEntity.ok(Collections.singletonMap("message", "ไฟล์ Excel ถูกต้อง ไม่มีข้อผิดพลาด")) :
                     ResponseEntity.badRequest().body(Collections.singletonMap("errors", validationErrors));
