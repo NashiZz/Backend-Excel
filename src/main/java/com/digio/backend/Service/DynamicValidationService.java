@@ -94,10 +94,12 @@ public class DynamicValidationService {
 
     private List<Map<String, Object>> processRows(Sheet sheet, List<String> headers, List<Integer> selectedIndices) {
         List<Map<String, Object>> errorList = new ArrayList<>();
+        Map<Integer, String> errorMap = new TreeMap<>();
 
         for (Row row : sheet) {
-            if (row.getRowNum() == 0) continue; // ข้ามแถวหัวข้อ
+            if (row.getRowNum() == 0) continue;
 
+            StringBuilder errorBuilder = new StringBuilder();
             for (int i = 0; i < headers.size(); i++) {
                 if (selectedIndices != null && !selectedIndices.contains(i)) continue;
 
@@ -105,16 +107,28 @@ public class DynamicValidationService {
                 String cellValue = getCellValue(row.getCell(i));
 
                 String errorMessage = validateCellAndGetMessage(header, cellValue);
-                if (errorMessage != null && !errorMessage.equals("success")) {
+                if (!errorMessage.equals("success")) {
                     Map<String, Object> errorDetails = new HashMap<>();
-                    errorDetails.put("row", row.getRowNum()); // Row เริ่มจาก 1
-                    errorDetails.put("column", i); // Column เริ่มจาก 1
-                    errorDetails.put("header", header); // ชื่อหัวข้อของคอลัมน์
+                    errorDetails.put("row", row.getRowNum() );
+                    errorDetails.put("column", i );
+                    errorDetails.put("header", header);
                     errorDetails.put("message", errorMessage);
 
                     errorList.add(errorDetails);
+                    errorBuilder.append(errorMessage).append("; ");
                 }
             }
+
+            if (!errorBuilder.isEmpty()) {
+                errorMap.put(row.getRowNum() + 1, errorBuilder.toString().trim());
+            }
+        }
+
+        if (!errorMap.isEmpty()) {
+            errorList.add(Map.of(
+                    "summary", "Errors found",
+                    "errorDetails", formatErrorMessages(errorMap)
+            ));
         }
 
         return errorList;
