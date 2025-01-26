@@ -23,7 +23,7 @@ public class AddressValidator {
         }
 
         if (trimmedAddress.length() < MIN_ADDRESS_LENGTH || trimmedAddress.length() > MAX_ADDRESS_LENGTH) {
-            return "ที่อยู่ควรมีความยาวหรือสั้นเกินไป";
+            return "ที่อยู่มีความยาวหรือสั้นเกินไป";
         }
 
         if (trimmedAddress.matches(".*(.)\\1{4,}.*")) {
