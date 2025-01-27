@@ -1,6 +1,7 @@
 package com.digio.backend.Service;
 
 import com.digio.backend.Validate.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -9,8 +10,10 @@ import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+@Slf4j
 @Service
 public class DynamicValidationService {
 
@@ -18,6 +21,31 @@ public class DynamicValidationService {
 
     public DynamicValidationService() {
         initializeDefaultValidationRules();
+    }
+
+    public List<Map<String, Object>> handleUploadWithTemplate(MultipartFile file, List<String> expectedHeaders) {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("ไฟล์ว่างเปล่า ไม่สามารถอ่านข้อมูลได้");
+        }
+
+        try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+
+            if (isRowsEmpty(sheet)) {
+                throw new IllegalArgumentException("ไฟล์นี้ไม่มีข้อมูล");
+            }
+
+            List<String> flatHeaders = expectedHeaders.stream()
+                    .map(header -> header.replace("[", "").replace("]", "").replace("\"", "")) // Remove [ ] and "
+                    .collect(Collectors.toList());
+
+            System.out.println(flatHeaders);
+
+            return processRows(sheet, flatHeaders, null);
+
+        } catch (IOException e) {
+            throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้", e);
+        }
     }
 
     public List<Map<String, Object>> validateExcelWithSelectedHeaders(MultipartFile file, List<String> selectedHeaders) {

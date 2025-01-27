@@ -57,6 +57,27 @@ public class ExcelValidationController {
         }
     }
 
+    @PostMapping("/template")
+    public ResponseEntity<?> handleUploadWithTemplate(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("condition") List<String> expectedHeaders) {
+        ResponseEntity<?> fileValidation = validateFile(file);
+        if (fileValidation != null) return fileValidation;
+
+        if (expectedHeaders == null || expectedHeaders.isEmpty()) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("message", "โปรดระบุหัวข้อที่ต้องการตรวจสอบในเทมเพลต"));
+        }
+
+        try {
+            List<Map<String, Object>> validationErrors = dynamicValidationService.handleUploadWithTemplate(file, expectedHeaders);
+            return validationErrors.isEmpty() ?
+                    ResponseEntity.ok(Collections.singletonMap("message", "ไฟล์ Excel ถูกต้อง ไม่มีข้อผิดพลาด") ) :
+                    ResponseEntity.badRequest().body(Collections.singletonMap("errors", validationErrors));
+        } catch (Exception e) {
+            return handleException(e);
+        }
+    }
+
     private ResponseEntity<?> validateFile(MultipartFile file) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("message", "โปรดอัปโหลดไฟล์ Excel ที่ถูกต้อง"));
