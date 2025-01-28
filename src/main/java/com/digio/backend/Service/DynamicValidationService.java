@@ -267,6 +267,10 @@ public class DynamicValidationService {
         validationRules.put(Pattern.compile("^(ที่อยู่|address).*$"), AddressValidator::validate);
         validationRules.put(Pattern.compile("^(อายุ|age).*$"), AgeValidator::validateDateOfBirth);
         validationRules.put(Pattern.compile("^(เพศ|gender).*$"), GenderValidator::validateGender);
+        validationRules.put(
+                Pattern.compile("^(จำนวนเงิน|balance|amount|transactionAmount|deposit|withdrawal|credit|debit|transferAmount|loanAmount|paymentAmount|fundAmount|accountBalance|currentBalance).*$"),
+                BalanceValidator::validate
+        );
     }
 }
 
