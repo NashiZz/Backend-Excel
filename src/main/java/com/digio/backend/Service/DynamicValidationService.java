@@ -1,5 +1,6 @@
 package com.digio.backend.Service;
 
+import com.digio.backend.DTO.Calculater;
 import com.digio.backend.Validate.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -23,7 +24,7 @@ public class DynamicValidationService {
         initializeDefaultValidationRules();
     }
 
-    public List<Map<String, Object>> handleUploadWithTemplate(MultipartFile file, List<String> expectedHeaders) {
+    public List<Map<String, Object>> handleUploadWithTemplate(MultipartFile file, List<String> expectedHeaders, List<Calculater> calculater) {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("ไฟล์ว่างเปล่า ไม่สามารถอ่านข้อมูลได้");
         }
@@ -34,6 +35,8 @@ public class DynamicValidationService {
             if (isRowsEmpty(sheet)) {
                 throw new IllegalArgumentException("ไฟล์นี้ไม่มีข้อมูล");
             }
+
+            System.out.println(calculater);
 
             List<String> flatHeaders = expectedHeaders.stream()
                     .map(header -> header.replace("[", "").replace("]", "").replace("\"", "")) // Remove [ ] and "

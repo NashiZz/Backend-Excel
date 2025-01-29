@@ -1,11 +1,13 @@
 package com.digio.backend.Controller;
 
+import com.digio.backend.DTO.Calculater;
 import com.digio.backend.Service.DynamicValidationService;
 import com.digio.backend.Service.ExcelValidationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Collections;
 import java.util.List;
@@ -60,7 +62,8 @@ public class ExcelValidationController {
     @PostMapping("/template")
     public ResponseEntity<?> handleUploadWithTemplate(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("condition") List<String> expectedHeaders) {
+            @RequestParam("condition") List<String> expectedHeaders,
+            @RequestParam("calculater") String calculaterJson) {
         ResponseEntity<?> fileValidation = validateFile(file);
         if (fileValidation != null) return fileValidation;
 
@@ -69,9 +72,13 @@ public class ExcelValidationController {
         }
 
         try {
-            List<Map<String, Object>> validationErrors = dynamicValidationService.handleUploadWithTemplate(file, expectedHeaders);
+            ObjectMapper objectMapper = new ObjectMapper();
+            List<Calculater> calculater = objectMapper.readValue(calculaterJson, objectMapper.getTypeFactory().constructCollectionType(List.class, Calculater.class));
+
+            List<Map<String, Object>> validationErrors = dynamicValidationService.handleUploadWithTemplate(file, expectedHeaders, calculater);
+
             return validationErrors.isEmpty() ?
-                    ResponseEntity.ok(Collections.singletonMap("message", "ไฟล์ Excel ถูกต้อง ไม่มีข้อผิดพลาด") ) :
+                    ResponseEntity.ok(Collections.singletonMap("message", "ไฟล์ Excel ถูกต้อง ไม่มีข้อผิดพลาด")) :
                     ResponseEntity.badRequest().body(Collections.singletonMap("errors", validationErrors));
         } catch (Exception e) {
             return handleException(e);
