@@ -63,7 +63,7 @@ public class ExcelValidationController {
     public ResponseEntity<?> handleUploadWithTemplate(
             @RequestParam("file") MultipartFile file,
             @RequestParam("condition") List<String> expectedHeaders,
-            @RequestParam("calculater") String calculaterJson) {
+            @RequestParam("calculater") List<String> calculater) {
         ResponseEntity<?> fileValidation = validateFile(file);
         if (fileValidation != null) return fileValidation;
 
@@ -72,9 +72,6 @@ public class ExcelValidationController {
         }
 
         try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            List<Calculater> calculater = objectMapper.readValue(calculaterJson, objectMapper.getTypeFactory().constructCollectionType(List.class, Calculater.class));
-
             List<Map<String, Object>> validationErrors = dynamicValidationService.handleUploadWithTemplate(file, expectedHeaders, calculater);
 
             return validationErrors.isEmpty() ?

@@ -1,6 +1,5 @@
 package com.digio.backend.Service;
 
-import com.digio.backend.DTO.Calculater;
 import com.digio.backend.Validate.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -24,7 +23,7 @@ public class DynamicValidationService {
         initializeDefaultValidationRules();
     }
 
-    public List<Map<String, Object>> handleUploadWithTemplate(MultipartFile file, List<String> expectedHeaders, List<Calculater> calculater) {
+    public List<Map<String, Object>> handleUploadWithTemplate(MultipartFile file, List<String> expectedHeaders, List<String> calculater) {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("ไฟล์ว่างเปล่า ไม่สามารถอ่านข้อมูลได้");
         }
@@ -36,15 +35,48 @@ public class DynamicValidationService {
                 throw new IllegalArgumentException("ไฟล์นี้ไม่มีข้อมูล");
             }
 
-            System.out.println(calculater);
+            // แปลง calculater ที่อยู่ในรูปแบบแยกกันเป็น List ของ List ที่แสดงแต่ละเงื่อนไข
+            List<List<String>> parsedCalculations = new ArrayList<>();
+            List<String> currentCalculation = new ArrayList<>();
+
+            for (String item : calculater) {
+                item = item.replace("\"", "").replace("[", "").replace("]", "").trim();
+                if (!item.isEmpty()) {
+                    if (item.equals("+") || item.equals("-")) {
+                        // ถ้าเจอเครื่องหมาย + หรือ - ให้นำมาทำเป็นเงื่อนไขใหม่
+                        if (!currentCalculation.isEmpty()) {
+                            parsedCalculations.add(new ArrayList<>(currentCalculation));
+                        }
+                        currentCalculation.clear();
+                        currentCalculation.add(item);  // เพิ่มเครื่องหมายเป็นตัวแรกในเงื่อนไข
+                    } else {
+                        // เพิ่มข้อมูลอื่น ๆ ลงไปในเงื่อนไข
+                        currentCalculation.add(item);
+                    }
+                }
+            }
+
+            // เพิ่มรายการสุดท้าย
+            if (!currentCalculation.isEmpty()) {
+                parsedCalculations.add(currentCalculation);
+            }
+
+            System.out.println("เงื่อนไขการคำนวณ: " + parsedCalculations);
 
             List<String> flatHeaders = expectedHeaders.stream()
-                    .map(header -> header.replace("[", "").replace("]", "").replace("\"", "")) // Remove [ ] and "
+                    .map(header -> header.replace("[", "").replace("]", "").replace("\"", "")) // ล้างสัญลักษณ์ที่ไม่จำเป็น
                     .collect(Collectors.toList());
 
-            System.out.println(flatHeaders);
+            System.out.println("หัวข้อในไฟล์ Excel: " + flatHeaders);
 
-            return processRows(sheet, flatHeaders, null);
+            // ประมวลผลทีละเงื่อนไข
+            List<Map<String, Object>> resultList = new ArrayList<>();
+
+            for (List<String> calc : parsedCalculations) {
+                resultList.addAll(processTemplateRows(sheet, flatHeaders, calc)); // ประมวลผลทีละเงื่อนไข
+            }
+
+            return resultList;
 
         } catch (IOException e) {
             throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้", e);
@@ -121,6 +153,76 @@ public class DynamicValidationService {
                 .map(lowerHeaders::indexOf)
                 .filter(index -> index >= 0)
                 .toList();
+    }
+
+    private List<Map<String, Object>> processTemplateRows(Sheet sheet, List<String> headers, List<String> calculation) {
+        List<Map<String, Object>> resultList = new ArrayList<>();
+
+        // คำนวณตามเงื่อนไข
+        String operator = calculation.get(0).trim();
+        String addend = calculation.get(1).trim();
+        String operand = calculation.get(2).trim();
+        String resultKey = calculation.get(3).trim();
+
+        // อ่านข้อมูลแถวแรก (Header) และจับคู่กับ Column Index
+        Row headerRow = sheet.getRow(0);
+        Map<String, Integer> headerIndexMap = new HashMap<>();
+        for (Cell cell : headerRow) {
+            String header = cell.getStringCellValue().trim();
+            headerIndexMap.put(header, cell.getColumnIndex());
+        }
+
+        // แสดงหัวข้อทั้งหมดในไฟล์ Excel
+        System.out.println("หัวข้อในไฟล์: " + headerIndexMap.keySet());
+
+        // ตรวจสอบว่าหัวข้อในเงื่อนไขมีอยู่ใน header หรือไม่
+        if (!headerIndexMap.containsKey(addend)) {
+            System.out.println("ไม่พบหัวข้อ: " + addend);
+        }
+        if (!headerIndexMap.containsKey(operand)) {
+            System.out.println("ไม่พบหัวข้อ: " + operand);
+        }
+
+        if (!headerIndexMap.containsKey(addend) || !headerIndexMap.containsKey(operand)) {
+            throw new IllegalArgumentException("หัวข้อที่ใช้คำนวณไม่ตรงกับข้อมูลในไฟล์");
+        }
+
+        // อ่านข้อมูลจากทุกแถว (เริ่มจากแถวที่ 1 เป็นต้นไป)
+        for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+            Row row = sheet.getRow(i);
+            Map<String, Object> rowData = new HashMap<>();
+
+            // ดึงค่าจากเซลล์ตามชื่อหัวข้อ
+            double addendValue = getValue(row, headerIndexMap.get(addend));
+            double operandValue = getValue(row, headerIndexMap.get(operand));
+            double result = 0.0;
+
+            // ทำการคำนวณตาม operator
+            if ("+".equals(operator)) {
+                result = addendValue + operandValue;
+            } else if ("-".equals(operator)) {
+                result = addendValue - operandValue;
+            } else {
+                throw new IllegalArgumentException("ไม่รองรับเครื่องหมายการคำนวณ: " + operator);
+            }
+
+            // ใส่ผลลัพธ์ใน rowData
+            rowData.put(resultKey, result);
+            resultList.add(rowData);
+
+            // พิมพ์ผลลัพธ์การคำนวณในแต่ละแถว
+            System.out.println("แถวที่ " + (i + 1) + ": " + addend + " (" + addendValue + ") "
+                    + operator + " " + operand + " (" + operandValue + ") = " + result);
+        }
+
+        // พิมพ์ผลรวมของการคำนวณทั้งหมด
+        double total = resultList.stream()
+                .mapToDouble(row -> (Double) row.get(resultKey))
+                .sum();
+
+        System.out.println("ผลรวมทั้งหมด: " + total);
+
+        return resultList;
     }
 
     private List<Map<String, Object>> processRows(Sheet sheet, List<String> headers, List<Integer> selectedIndices) {
@@ -219,6 +321,21 @@ public class DynamicValidationService {
         if (!unknownHeaders.isEmpty()) {
             throw new IllegalArgumentException("พบหัวข้อที่ไม่รู้จัก: " + String.join(", ", unknownHeaders));
         }
+    }
+
+    private double getValue(Row row, int cellIndex) {
+        Cell cell = row.getCell(cellIndex, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+        return switch (cell.getCellType()) {
+            case NUMERIC -> cell.getNumericCellValue();
+            case STRING -> {
+                try {
+                    yield Double.parseDouble(cell.getStringCellValue().trim());
+                } catch (NumberFormatException e) {
+                    yield 0.0;
+                }
+            }
+            default -> 0.0;
+        };
     }
 
     private String getCellValue(Cell cell) {
