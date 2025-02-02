@@ -364,7 +364,6 @@ public class DynamicValidationService {
                 .toList();
     }
 
-
     private boolean isRowsEmpty(Sheet sheet) {
         for (int rowIndex = 1; rowIndex < sheet.getPhysicalNumberOfRows(); rowIndex++) {
             Row row = sheet.getRow(rowIndex);

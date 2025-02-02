@@ -10,9 +10,9 @@ public class CitizenIdValidator {
             return "บัตรประชาชนไม่ถูกต้อง";
         }
 
-//        if (!isValidCitizenId(citizenId)) {
-//            return "บัตรประชาชนไม่ถูกต้อง";
-//        }
+        if (!isValidCitizenId(citizenId)) {
+            return "บัตรประชาชนไม่ถูกต้อง";
+        }
 
         return "success";
     }

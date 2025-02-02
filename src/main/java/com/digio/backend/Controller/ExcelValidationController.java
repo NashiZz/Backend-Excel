@@ -1,13 +1,12 @@
 package com.digio.backend.Controller;
 
-import com.digio.backend.DTO.Calculater;
 import com.digio.backend.Service.DynamicValidationService;
 import com.digio.backend.Service.ExcelValidationService;
+import com.digio.backend.Service.TemplateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Collections;
 import java.util.List;
@@ -22,6 +21,9 @@ public class ExcelValidationController {
 
     @Autowired
     private DynamicValidationService dynamicValidationService;
+
+    @Autowired
+    private TemplateService templateService;
 
     @PostMapping("/dynamic")
     public ResponseEntity<?> validateExcelFile(@RequestParam("file") MultipartFile file) {
@@ -72,7 +74,7 @@ public class ExcelValidationController {
         }
 
         try {
-            List<Map<String, Object>> validationErrors = dynamicValidationService.handleUploadWithTemplate(file, expectedHeaders, calculater);
+            List<Map<String, Object>> validationErrors = templateService.handleUploadWithTemplate(file, expectedHeaders, calculater);
 
             return validationErrors.isEmpty() ?
                     ResponseEntity.ok(Collections.singletonMap("message", "ไฟล์ Excel ถูกต้อง ไม่มีข้อผิดพลาด")) :
