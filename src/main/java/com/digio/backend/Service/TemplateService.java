@@ -90,7 +90,7 @@ public class TemplateService {
     private List<Map<String, Object>> processRowsAndCalculations(Sheet sheet, List<String> headers, List<Integer> selectedIndices, List<String> calculation) {
         List<Map<String, Object>> resultList = new ArrayList<>();
         List<Map<String, Object>> errorList = new ArrayList<>();
-        Map<Integer, String> errorMap = new TreeMap<>();
+        Map<Integer, String> errorSummaryMap = new TreeMap<>();
 
         Row headerRow = sheet.getRow(0);
         Map<String, Integer> headerIndexMap = new HashMap<>();
@@ -137,10 +137,6 @@ public class TemplateService {
                 }
             }
 
-            if (!errorBuilder.isEmpty()) {
-                errorMap.put(row.getRowNum() + 1, errorBuilder.toString().trim());
-            }
-
             if (hasCalculation) {
                 double addendValue = getValue(row, headerIndexMap.get(addend));
                 double operandValue = getValue(row, headerIndexMap.get(operand));
@@ -151,6 +147,10 @@ public class TemplateService {
                         result = addendValue + operandValue;
                     } else if ("-".equals(operator)) {
                         result = addendValue - operandValue;
+                    } else if ("*".equals(operator)) {
+                        result = addendValue * operandValue;
+                    } else if ("/".equals(operator)) {
+                        result = addendValue / operandValue;
                     } else {
                         throw new IllegalArgumentException("ไม่รองรับเครื่องหมายการคำนวณ: " + operator);
                     }
@@ -158,8 +158,7 @@ public class TemplateService {
                     if (headerIndexMap.containsKey(resultKey)) {
                         double expectedBalance = getValue(row, headerIndexMap.get(resultKey));
                         if (result != expectedBalance) {
-                            String calcError =  resultKey + ": คาดหวัง " +
-                                    result + " แต่ในไฟล์ได้ " + expectedBalance;
+                            String calcError = resultKey + ": คาดหวัง " + result + " แต่ในไฟล์ได้ " + expectedBalance;
 
                             Map<String, Object> errorDetails = new HashMap<>();
                             errorDetails.put("row", row.getRowNum());
@@ -179,25 +178,27 @@ public class TemplateService {
             }
 
             if (!errorBuilder.isEmpty()) {
-                errorMap.put(row.getRowNum() + 1, errorBuilder.toString().trim());
+                errorSummaryMap.put(row.getRowNum() + 1, errorBuilder.toString().trim());
             } else {
                 resultList.add(rowData);
             }
         }
 
-        if (!errorList.isEmpty()) {
-            errorList.clear();
-            errorList.add(Map.of(
-                    "summary", "Errors found",
-                    "errorDetails", formatErrorMessages(errorMap)
-            ));
-        }
+        List<String> errorSummaryList = formatErrorMessages(errorSummaryMap);
 
         if (!errorList.isEmpty()) {
-            return errorList;
-        } else {
-            return resultList;
+            System.out.println("ข้อผิดพลาดที่พบ: " + errorList);
+            System.out.println("รายละเอียดข้อผิดพลาด: " + errorSummaryList);
+
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("summary", "Errors found");
+            errorResponse.put("errorList", errorList);
+            errorResponse.put("errorDetails", errorSummaryList);
+
+            return List.of(errorResponse);
         }
+
+        return resultList;
     }
 
     private boolean isRowsEmpty(Sheet sheet) {
