@@ -33,25 +33,28 @@ public class TemplateService {
             }
 
             List<List<String>> parsedCalculations = new ArrayList<>();
-            List<String> currentCalculation = new ArrayList<>();
 
-            for (String item : calculater) {
-                item = item.replace("\"", "").replace("[", "").replace("]", "").trim();
-                if (!item.isEmpty()) {
-                    if (item.equals("+") || item.equals("-")) {
-                        if (!currentCalculation.isEmpty()) {
-                            parsedCalculations.add(new ArrayList<>(currentCalculation));
+            if (calculater != null && !calculater.isEmpty()) {
+                List<String> currentCalculation = new ArrayList<>();
+
+                for (String item : calculater) {
+                    item = item.replace("\"", "").replace("[", "").replace("]", "").trim();
+                    if (!item.isEmpty()) {
+                        if (item.equals("+") || item.equals("-")) {
+                            if (!currentCalculation.isEmpty()) {
+                                parsedCalculations.add(new ArrayList<>(currentCalculation));
+                            }
+                            currentCalculation.clear();
+                            currentCalculation.add(item);
+                        } else {
+                            currentCalculation.add(item);
                         }
-                        currentCalculation.clear();
-                        currentCalculation.add(item);
-                    } else {
-                        currentCalculation.add(item);
                     }
                 }
-            }
 
-            if (!currentCalculation.isEmpty()) {
-                parsedCalculations.add(currentCalculation);
+                if (!currentCalculation.isEmpty()) {
+                    parsedCalculations.add(currentCalculation);
+                }
             }
 
             System.out.println("เงื่อนไขการคำนวณ: " + parsedCalculations);
@@ -61,12 +64,23 @@ public class TemplateService {
                     .collect(Collectors.toList());
 
             List<Map<String, Object>> resultList = new ArrayList<>();
+            List<Map<String, Object>> lastErrorList = new ArrayList<>();
 
-            for (List<String> calc : parsedCalculations) {
-                resultList.addAll(processRowsAndCalculations(sheet, flatHeaders, null, calc));
+            if (!parsedCalculations.isEmpty()) {
+                for (List<String> calc : parsedCalculations) {
+                    List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, flatHeaders, null, calc);
+
+                    if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
+                        lastErrorList = tempResult;
+                    } else {
+                        resultList.addAll(tempResult);
+                    }
+                }
+            } else {
+                resultList = processRowsAndCalculations(sheet, flatHeaders, null, null);
             }
 
-            return resultList;
+            return !lastErrorList.isEmpty() ? lastErrorList : resultList;
 
         } catch (IOException e) {
             throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้", e);
@@ -78,7 +92,6 @@ public class TemplateService {
         List<Map<String, Object>> errorList = new ArrayList<>();
         Map<Integer, String> errorMap = new TreeMap<>();
 
-        // สร้าง Header Index Map
         Row headerRow = sheet.getRow(0);
         Map<String, Integer> headerIndexMap = new HashMap<>();
         for (Cell cell : headerRow) {
@@ -86,7 +99,6 @@ public class TemplateService {
             headerIndexMap.put(header, cell.getColumnIndex());
         }
 
-        // ตรวจสอบว่ามีเงื่อนไขการคำนวณหรือไม่
         boolean hasCalculation = calculation != null && calculation.size() == 4;
         String operator = null, addend = null, operand = null, resultKey = null;
 
@@ -106,7 +118,6 @@ public class TemplateService {
             Map<String, Object> rowData = new HashMap<>();
             StringBuilder errorBuilder = new StringBuilder();
 
-            // ตรวจสอบค่าข้อมูล (Validation)
             for (int colIndex = 0; colIndex < headers.size(); colIndex++) {
                 if (selectedIndices != null && !selectedIndices.contains(colIndex)) continue;
 
@@ -126,12 +137,10 @@ public class TemplateService {
                 }
             }
 
-            // ตรวจสอบข้อผิดพลาดที่เกิดขึ้น
             if (!errorBuilder.isEmpty()) {
                 errorMap.put(row.getRowNum() + 1, errorBuilder.toString().trim());
             }
 
-            // ทำการคำนวณถ้ามีเงื่อนไขการคำนวณ
             if (hasCalculation) {
                 double addendValue = getValue(row, headerIndexMap.get(addend));
                 double operandValue = getValue(row, headerIndexMap.get(operand));
@@ -146,7 +155,6 @@ public class TemplateService {
                         throw new IllegalArgumentException("ไม่รองรับเครื่องหมายการคำนวณ: " + operator);
                     }
 
-                    // ตรวจสอบว่าค่าที่ได้ตรงกับที่คาดหวังหรือไม่
                     if (headerIndexMap.containsKey(resultKey)) {
                         double expectedBalance = getValue(row, headerIndexMap.get(resultKey));
                         if (result != expectedBalance) {
@@ -159,20 +167,17 @@ public class TemplateService {
                             errorDetails.put("header", resultKey);
                             errorDetails.put("message", calcError);
 
-                            // เพิ่มข้อผิดพลาดจากการคำนวณ
                             errorList.add(errorDetails);
                             errorBuilder.append(calcError).append("; ");
                         }
                     }
 
-                    // ตรวจสอบว่าผลลัพธ์คำนวณถูกต้อง หากไม่ต้องการบันทึกค่าแล้วหลังจาก error
                     if (errorBuilder.isEmpty()) {
                         rowData.put(resultKey, result);
                     }
                 }
             }
 
-            // ถ้ามีข้อผิดพลาดใด ๆ ให้เพิ่มข้อมูลลงใน errorList
             if (!errorBuilder.isEmpty()) {
                 errorMap.put(row.getRowNum() + 1, errorBuilder.toString().trim());
             } else {
@@ -180,17 +185,12 @@ public class TemplateService {
             }
         }
 
-        // ถ้ามีข้อผิดพลาดใน errorList ให้เพิ่ม summary
         if (!errorList.isEmpty()) {
+            errorList.clear();
             errorList.add(Map.of(
                     "summary", "Errors found",
                     "errorDetails", formatErrorMessages(errorMap)
             ));
-        }
-
-        System.out.println("Errors found:");
-        for (Map<String, Object> error : errorList) {
-            System.out.println(error);
         }
 
         if (!errorList.isEmpty()) {
