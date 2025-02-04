@@ -57,8 +57,6 @@ public class TemplateService {
                 }
             }
 
-            System.out.println("เงื่อนไขการคำนวณ: " + parsedCalculations);
-
             List<String> flatHeaders = expectedHeaders.stream()
                     .map(header -> header.replace("[", "").replace("]", "").replace("\"", ""))
                     .collect(Collectors.toList());
