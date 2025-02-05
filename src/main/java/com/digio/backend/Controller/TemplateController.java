@@ -2,8 +2,6 @@ package com.digio.backend.Controller;
 
 import com.digio.backend.DTO.TemplateRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,14 +21,11 @@ public class TemplateController {
 
     // D:/Project/ProjectExcel/template/template.yaml
     // /Users/prasopchocksancharoen/Documents/Intern-Poonsap/ProjectExcel/backend/template/template.yaml
-    public String getTemplateFilePath() throws IOException {
-        Resource resource = new ClassPathResource("template/template.yaml");
-        return resource.getFile().getAbsolutePath();
-    }
+    private static final String FILE_PATH = "src/main/resources/template/template.yaml";
 
     @GetMapping("/{userToken}")
-    public ResponseEntity<Object> getTemplatesByUserToken(@PathVariable String userToken) throws IOException {
-        File file = new File(getTemplateFilePath());
+    public ResponseEntity<Object> getTemplatesByUserToken(@PathVariable String userToken) {
+        File file = new File(FILE_PATH);
         if (!file.exists() || file.length() == 0) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "❌ No templates found for user " + userToken));
@@ -60,8 +55,8 @@ public class TemplateController {
     }
 
     @DeleteMapping("/{userToken}/{templateName}")
-    public ResponseEntity<Object> deleteTemplate(@PathVariable String userToken, @PathVariable String templateName) throws IOException {
-        File file = new File(getTemplateFilePath());
+    public ResponseEntity<Object> deleteTemplate(@PathVariable String userToken, @PathVariable String templateName) {
+        File file = new File(FILE_PATH);
         if (!file.exists() || file.length() == 0) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "❌ No templates found"));
@@ -96,8 +91,8 @@ public class TemplateController {
 
     @PutMapping("/{userToken}/{templateName}")
     public ResponseEntity<Object> updateTemplate(@PathVariable String userToken, @PathVariable String templateName,
-                                                 @RequestBody TemplateRequest templateRequest) throws IOException {
-        File file = new File(getTemplateFilePath());
+                                                 @RequestBody TemplateRequest templateRequest) {
+        File file = new File(FILE_PATH);
         if (!file.exists() || file.length() == 0) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "❌ No templates found"));
@@ -150,7 +145,7 @@ public class TemplateController {
         representer.addClassTag(Map.class, Tag.MAP);
 
         Yaml yaml = new Yaml(representer, options);
-        try (FileWriter writer = new FileWriter(getTemplateFilePath())) {
+        try (FileWriter writer = new FileWriter(FILE_PATH)) {
             yaml.dump(yamlData, writer);
         } catch (IOException e) {
             throw new RuntimeException("❌ Error saving YAML file", e);
@@ -181,7 +176,7 @@ public class TemplateController {
     }
 
     private File createYamlFile(TemplateRequest templateRequest) throws IOException {
-        File file = new File(getTemplateFilePath());
+        File file = new File(FILE_PATH);
         Map<String, Map<String, List<Map<String, Object>>>> yamlData = new HashMap<>();
 
         LoaderOptions loaderOptions = new LoaderOptions();
