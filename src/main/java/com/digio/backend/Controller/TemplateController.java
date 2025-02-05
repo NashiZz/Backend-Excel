@@ -21,7 +21,7 @@ public class TemplateController {
 
     // D:/Project/ProjectExcel/template/template.yaml
     // /Users/prasopchocksancharoen/Documents/Intern-Poonsap/ProjectExcel/backend/template/template.yaml
-    private static final String FILE_PATH = "D:/Project/ProjectExcel/template/template.yaml";
+    private static final String FILE_PATH = "template/template.yaml";
 
     @GetMapping("/{userToken}")
     public ResponseEntity<Object> getTemplatesByUserToken(@PathVariable String userToken) {
