@@ -1,10 +1,14 @@
 D:\Project\ProjectExcel\src\main\java\com\digio\backend\BackendApplication.java
 D:\Project\ProjectExcel\src\main\java\com\digio\backend\Config\WebConfig.java
 D:\Project\ProjectExcel\src\main\java\com\digio\backend\Controller\ExcelValidationController.java
+D:\Project\ProjectExcel\src\main\java\com\digio\backend\Controller\TemplateController.java
+D:\Project\ProjectExcel\src\main\java\com\digio\backend\DTO\TemplateRequest.java
 D:\Project\ProjectExcel\src\main\java\com\digio\backend\Service\DynamicValidationService.java
 D:\Project\ProjectExcel\src\main\java\com\digio\backend\Service\ExcelValidationService.java
+D:\Project\ProjectExcel\src\main\java\com\digio\backend\Service\TemplateService.java
 D:\Project\ProjectExcel\src\main\java\com\digio\backend\Validate\AddressValidator.java
 D:\Project\ProjectExcel\src\main\java\com\digio\backend\Validate\AgeValidator.java
+D:\Project\ProjectExcel\src\main\java\com\digio\backend\Validate\BalanceValidator.java
 D:\Project\ProjectExcel\src\main\java\com\digio\backend\Validate\CitizenIdValidator.java
 D:\Project\ProjectExcel\src\main\java\com\digio\backend\Validate\EmailValidate.java
 D:\Project\ProjectExcel\src\main\java\com\digio\backend\Validate\GenderValidator.java

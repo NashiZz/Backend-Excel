@@ -1,9 +1,0 @@
-com\digio\backend\Validate\EmailValidateTest.class
-com\digio\backend\Validate\GenderValidatorTest.class
-com\digio\backend\Validate\PhoneValidatorTest.class
-com\digio\backend\Controller\ExcelValidationControllerTest.class
-com\digio\backend\Validate\NameValidatorTest.class
-com\digio\backend\Validate\AgeValidatorTest.class
-com\digio\backend\Validate\CitizenIdValidatorTest.class
-com\digio\backend\BackendApplicationTests.class
-com\digio\backend\Validate\AddressValidatorTest.class
