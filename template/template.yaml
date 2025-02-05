@@ -1,0 +1,40 @@
+---
+064bf8db-d077-4497-822a-d83ca9c1c0c0:
+  templates:
+  - userToken: 064bf8db-d077-4497-822a-d83ca9c1c0c0
+    templatename: template001
+    headers:
+    - name: name
+      condition: name
+    - name: email
+      condition: email
+    - name: citizenId
+      condition: citizenid
+    condition:
+      calculations: [
+        ]
+    maxRows: 10
+b1321f66-a233-439a-86b8-ea2635653074:
+  templates:
+  - userToken: b1321f66-a233-439a-86b8-ea2635653074
+    templatename: บัญชีสมาชิก
+    headers:
+    - name: ยอดคงเหลือ
+      condition: balance
+    - name: รายรับ
+      condition: balance
+    - name: รายจ่าย
+      condition: balance
+    - name: ยอดเงินรวม
+      condition: balance
+    - name: ชื่อ
+      condition: name
+    - name: บัตรประชาชน
+      condition: citizenid
+    condition:
+      calculations:
+      - type: +
+        addend: ยอดคงเหลือ
+        operand: รายรับ
+        result: ยอดเงินรวม
+    maxRows: 0
