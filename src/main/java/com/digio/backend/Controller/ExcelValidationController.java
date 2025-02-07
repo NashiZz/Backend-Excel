@@ -32,9 +32,13 @@ public class ExcelValidationController {
 
         try {
             List<Map<String, Object>> validationErrors = dynamicValidationService.validateExcel(file);
-            return validationErrors.isEmpty() ?
-                    ResponseEntity.ok(Collections.singletonMap("message", "ไฟล์ Excel ถูกต้อง ไม่มีข้อผิดพลาด")) :
-                    ResponseEntity.badRequest().body(Collections.singletonMap("errors", validationErrors));
+            System.out.println(validationErrors);
+
+            if (validationErrors.isEmpty()) {
+                return ResponseEntity.ok(Collections.singletonMap("message", "ไฟล์ Excel ถูกต้อง ไม่มีข้อผิดพลาด"));
+            }
+
+            return ResponseEntity.badRequest().body(Collections.singletonMap("errors", validationErrors));
         } catch (Exception e) {
             return handleException(e);
         }
@@ -66,16 +70,17 @@ public class ExcelValidationController {
             @RequestParam("file") MultipartFile file,
             @RequestParam("condition") List<String> expectedHeaders,
             @RequestParam("calculater") List<String> calculater) {
+
         ResponseEntity<?> fileValidation = validateFile(file);
         if (fileValidation != null) return fileValidation;
 
-        if (expectedHeaders == null || expectedHeaders.isEmpty()) {
-            return ResponseEntity.badRequest().body(Collections.singletonMap("message", "โปรดระบุหัวข้อที่ต้องการตรวจสอบในเทมเพลต"));
-        }
+        System.out.println("expected" + expectedHeaders);
+        System.out.println("calculater" + calculater);
 
         try {
             List<Map<String, Object>> validationErrors = templateService.handleUploadWithTemplate(file, expectedHeaders, calculater);
 
+            System.out.println(validationErrors);
             return validationErrors.isEmpty() ?
                     ResponseEntity.ok(Collections.singletonMap("message", "ไฟล์ Excel ถูกต้อง ไม่มีข้อผิดพลาด")) :
                     ResponseEntity.badRequest().body(Collections.singletonMap("errors", validationErrors));

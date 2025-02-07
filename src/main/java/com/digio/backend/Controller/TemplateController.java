@@ -92,7 +92,7 @@ public class TemplateController {
 
         System.out.println("✅ New user token added: " + userToken);
         System.out.println("✅ User token updated successfully");
-        return ResponseEntity.ok(Map.of("message", "✅ User token added successfully"));
+        return ResponseEntity.ok(Map.of("message", "User token added successfully"));
     }
 
     @DeleteMapping("/{userToken}/{templateName}")

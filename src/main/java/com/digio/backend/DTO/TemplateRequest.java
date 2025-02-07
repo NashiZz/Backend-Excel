@@ -1,10 +1,12 @@
 package com.digio.backend.DTO;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.util.List;
 
 @Data
-@NoArgsConstructor  // ✅ เพิ่ม constructor เปล่า
+@NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class TemplateRequest {
     private String userToken;
     private String templatename;

@@ -78,7 +78,7 @@ public class TemplateService {
                 resultList = processRowsAndCalculations(sheet, flatHeaders, null, null);
             }
 
-            return !lastErrorList.isEmpty() ? lastErrorList : resultList;
+            return !lastErrorList.isEmpty() ? lastErrorList : (resultList.isEmpty() ? Collections.emptyList() : resultList);
 
         } catch (IOException e) {
             throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้", e);
@@ -185,9 +185,6 @@ public class TemplateService {
         List<String> errorSummaryList = formatErrorMessages(errorSummaryMap);
 
         if (!errorList.isEmpty()) {
-            System.out.println("ข้อผิดพลาดที่พบ: " + errorList);
-            System.out.println("รายละเอียดข้อผิดพลาด: " + errorSummaryList);
-
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("summary", "Errors found");
             errorResponse.put("errorList", errorList);
@@ -196,7 +193,7 @@ public class TemplateService {
             return List.of(errorResponse);
         }
 
-        return resultList;
+        return resultList.isEmpty() || resultList.stream().allMatch(Map::isEmpty) ? Collections.emptyList() : resultList;
     }
 
     private boolean isRowsEmpty(Sheet sheet) {
