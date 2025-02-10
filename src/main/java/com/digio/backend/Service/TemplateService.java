@@ -3,6 +3,7 @@ package com.digio.backend.Service;
 import com.digio.backend.Validate.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.poi.ss.usermodel.*;
+import org.springframework.asm.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,7 +30,7 @@ public class TemplateService {
     }
 
     public List<Map<String, Object>> handleUploadWithTemplate(
-            MultipartFile file, List<String> expectedHeaders, List<String> calculater) {
+            MultipartFile file, List<String> expectedHeaders, List<String> calculater, List<String> relation) {
 
         validateFile(file);
 
@@ -38,8 +39,11 @@ public class TemplateService {
             validateSheet(sheet);
 
             List<List<String>> parsedCalculations = parseCalculations(calculater);
-//            List<List<String>> parsedRelations = parseRelations(relation);
+            List<List<String>> parsedRelations = parseRelations(relation);
             List<String> flatHeaders = cleanHeaders(expectedHeaders);
+
+            System.out.println(parsedCalculations);
+            System.out.println(parsedRelations);
 
             return processSheet(sheet, flatHeaders, parsedCalculations);
 
@@ -76,7 +80,7 @@ public class TemplateService {
         for (String item : calculater) {
             item = item.replace("\"", "").replace("[", "").replace("]", "").trim();
             if (!item.isEmpty()) {
-                if (item.equals("+") || item.equals("-")) {
+                if (item.equals("+") || item.equals("-") || item.equals("x") || item.equals("/")) {
                     if (!currentCalculation.isEmpty()) {
                         parsedCalculations.add(new ArrayList<>(currentCalculation));
                     }
@@ -92,22 +96,26 @@ public class TemplateService {
         return parsedCalculations;
     }
 
-    private List<List<String>> parseRelations(List<String> relations) {
+    private static List<List<String>> parseRelations(List<String> relations) {
         List<List<String>> parsedRelations = new ArrayList<>();
         if (relations == null || relations.isEmpty()) {
             return parsedRelations;
         }
 
+        List<String> currentRelation= new ArrayList<>();
         for (String item : relations) {
             item = item.replace("\"", "").replace("[", "").replace("]", "").trim();
             if (!item.isEmpty()) {
-                List<String> elements = Arrays.asList(item.split(","));
-                parsedRelations.add(elements);
+                currentRelation.add(item);
             }
+        }
+        if (!currentRelation.isEmpty()) {
+            parsedRelations.add(currentRelation);
         }
 
         return parsedRelations;
     }
+
 
     private List<Map<String, Object>> processSheet(Sheet sheet, List<String> headers, List<List<String>> calculations) {
         List<Map<String, Object>> resultList = new ArrayList<>();
@@ -161,6 +169,7 @@ public class TemplateService {
             Map<String, Object> rowData = new HashMap<>();
             StringBuilder errorBuilder = new StringBuilder();
 
+            // การตรวจสอบค่าผิดปกติในแต่ละเซลล์
             for (int colIndex = 0; colIndex < headers.size(); colIndex++) {
                 if (selectedIndices != null && !selectedIndices.contains(colIndex)) continue;
 
@@ -186,16 +195,25 @@ public class TemplateService {
                 double result = 0.0;
 
                 if (addendValue != 0 && operandValue != 0) {
+                    System.out.println("คำนวณสำหรับแถว " + row.getRowNum() + ": ");
+                    System.out.println("Addend: " + addendValue + ", Operand: " + operandValue);
+
                     if ("+".equals(operator)) {
                         result = addendValue + operandValue;
+                        System.out.println("ผลลัพธ์ ( + ): " + result);
                     } else if ("-".equals(operator)) {
                         result = addendValue - operandValue;
-                    } else if ("*".equals(operator)) {
+                        System.out.println("ผลลัพธ์ ( - ): " + result);
+                    } else if ("x".equals(operator)) {
                         result = addendValue * operandValue;
+                        System.out.println("ผลลัพธ์ ( x ): " + result);
                     } else if ("/".equals(operator)) {
                         result = addendValue / operandValue;
+                        System.out.println("ผลลัพธ์ ( / ): " + result);
                     } else {
-                        throw new IllegalArgumentException("ไม่รองรับเครื่องหมายการคำนวณ: " + operator);
+                        String calcError = "ไม่รองรับเครื่องหมายการคำนวณ: " + operator;
+                        System.out.println(calcError);
+                        throw new IllegalArgumentException(calcError);
                     }
 
                     if (headerIndexMap.containsKey(resultKey)) {
@@ -211,15 +229,21 @@ public class TemplateService {
 
                             errorList.add(errorDetails);
                             errorBuilder.append(calcError).append("; ");
+
+                            // เพิ่มข้อผิดพลาดการคำนวณใน summary
+                            errorSummaryMap.put(row.getRowNum() + 1, errorBuilder.toString().trim());
+                            System.out.println("ข้อผิดพลาด: " + calcError);
                         }
                     }
 
+                    // ถ้าไม่มีข้อผิดพลาดจากการคำนวณ เพิ่มข้อมูลใน rowData
                     if (errorBuilder.isEmpty()) {
                         rowData.put(resultKey, result);
                     }
                 }
             }
 
+            // เก็บข้อผิดพลาดใน summary ถ้ามีข้อผิดพลาด
             if (!errorBuilder.isEmpty()) {
                 errorSummaryMap.put(row.getRowNum() + 1, errorBuilder.toString().trim());
             } else {
@@ -227,17 +251,27 @@ public class TemplateService {
             }
         }
 
+        // ถ้ามีข้อผิดพลาด ส่งกลับผลลัพธ์ข้อผิดพลาด
         List<String> errorSummaryList = formatErrorMessages(errorSummaryMap);
 
+        System.out.println("Error Summary List:");
+        for (String error : errorSummaryList) {
+            System.out.println(error);
+        }
+
         if (!errorList.isEmpty()) {
+            // ลบข้อผิดพลาดซ้ำ
+            Set<Map<String, Object>> uniqueErrors = new HashSet<>(errorList);
+
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("summary", "Errors found");
-            errorResponse.put("errorList", errorList);
+            errorResponse.put("errorList", new ArrayList<>(uniqueErrors));
             errorResponse.put("errorDetails", errorSummaryList);
 
             return List.of(errorResponse);
         }
 
+        // คืนค่าผลลัพธ์ที่ไม่มีข้อผิดพลาด
         return resultList.isEmpty() || resultList.stream().allMatch(Map::isEmpty) ? Collections.emptyList() : resultList;
     }
 

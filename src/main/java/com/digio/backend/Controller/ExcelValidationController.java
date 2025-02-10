@@ -69,23 +69,25 @@ public class ExcelValidationController {
     public ResponseEntity<?> handleUploadWithTemplate(
             @RequestParam("file") MultipartFile file,
             @RequestParam("condition") List<String> expectedHeaders,
-            @RequestParam("calculater") List<String> calculater
-            ) {
-//        @RequestParam("relation") List<String> relation
+            @RequestParam("calculater") List<String> calculater,
+            @RequestParam("relation") List<String> relation) {
+
         ResponseEntity<?> fileValidation = validateFile(file);
         if (fileValidation != null) return fileValidation;
 
         System.out.println("expected" + expectedHeaders);
         System.out.println("calculater" + calculater);
-//        System.out.println("relation" + relation);
+        System.out.println("relation" + relation);
 
         try {
-            List<Map<String, Object>> validationErrors = templateService.handleUploadWithTemplate(file, expectedHeaders, calculater);
+            List<Map<String, Object>> validationErrors = templateService.handleUploadWithTemplate(file, expectedHeaders, calculater, relation);
 
             System.out.println(validationErrors);
-            return validationErrors.isEmpty() ?
-                    ResponseEntity.ok(Collections.singletonMap("message", "ไฟล์ Excel ถูกต้อง ไม่มีข้อผิดพลาด")) :
-                    ResponseEntity.badRequest().body(Collections.singletonMap("errors", validationErrors));
+            if (validationErrors.isEmpty() || !validationErrors.get(0).containsKey("summary")) {
+                return ResponseEntity.ok(Collections.singletonMap("message", "ไฟล์ Excel ถูกต้อง ไม่มีข้อผิดพลาด"));
+            } else {
+                return ResponseEntity.badRequest().body(Collections.singletonMap("errors", validationErrors));
+            }
         } catch (Exception e) {
             return handleException(e);
         }
