@@ -81,7 +81,7 @@ public class TemplateRequest {
     @NoArgsConstructor
     public static class Condition {
         private List<Calculation> calculations;
-
+        private List<Relation> relations;
 
         public List<Calculation> getCalculations() {
             return calculations;
@@ -89,6 +89,14 @@ public class TemplateRequest {
 
         public void setCalculations(List<Calculation> calculations) {
             this.calculations = calculations;
+        }
+
+        public List<Relation> getRelations() {
+            return relations;
+        }
+
+        public void setRelations(List<Relation> relations) {
+            this.relations = relations;
         }
 
         @Data
@@ -129,6 +137,47 @@ public class TemplateRequest {
 
             public void setResult(String result) {
                 this.result = result;
+            }
+        }
+
+        @Data
+        @NoArgsConstructor
+        public static class Relation {
+            private String column1;
+            private String condition;
+            private String column2;
+            private String condition2;
+
+            public String getColumn1() {
+                return column1;
+            }
+
+            public void setColumn1(String column1) {
+                this.column1 = column1;
+            }
+
+            public String getCondition() {
+                return condition;
+            }
+
+            public void setCondition(String condition) {
+                this.condition = condition;
+            }
+
+            public String getColumn2() {
+                return column2;
+            }
+
+            public void setColumn2(String column2) {
+                this.column2 = column2;
+            }
+
+            public String getCondition2() {
+                return condition2;
+            }
+
+            public void setCondition2(String condition2) {
+                this.condition2 = condition2;
             }
         }
     }

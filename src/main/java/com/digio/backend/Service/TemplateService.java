@@ -1,7 +1,9 @@
 package com.digio.backend.Service;
 
 import com.digio.backend.Validate.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.poi.ss.usermodel.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,75 +16,118 @@ import java.util.stream.Collectors;
 @Service
 public class TemplateService {
 
+    @Autowired
+    ConditionRelationServices conditionRelationServices;
+
+    @Autowired
+    ObjectMapper objectMapper;
+
     private final Map<Pattern, Function<String, String>> validationRules = new HashMap<>();
 
     public TemplateService() {
         initializeDefaultValidationRules();
     }
 
-    public List<Map<String, Object>> handleUploadWithTemplate(MultipartFile file, List<String> expectedHeaders, List<String> calculater) {
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("ไฟล์ว่างเปล่า ไม่สามารถอ่านข้อมูลได้");
-        }
+    public List<Map<String, Object>> handleUploadWithTemplate(
+            MultipartFile file, List<String> expectedHeaders, List<String> calculater) {
+
+        validateFile(file);
 
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
+            validateSheet(sheet);
 
-            if (isRowsEmpty(sheet)) {
-                throw new IllegalArgumentException("ไฟล์นี้ไม่มีข้อมูล");
-            }
+            List<List<String>> parsedCalculations = parseCalculations(calculater);
+//            List<List<String>> parsedRelations = parseRelations(relation);
+            List<String> flatHeaders = cleanHeaders(expectedHeaders);
 
-            List<List<String>> parsedCalculations = new ArrayList<>();
-
-            if (calculater != null && !calculater.isEmpty()) {
-                List<String> currentCalculation = new ArrayList<>();
-
-                for (String item : calculater) {
-                    item = item.replace("\"", "").replace("[", "").replace("]", "").trim();
-                    if (!item.isEmpty()) {
-                        if (item.equals("+") || item.equals("-")) {
-                            if (!currentCalculation.isEmpty()) {
-                                parsedCalculations.add(new ArrayList<>(currentCalculation));
-                            }
-                            currentCalculation.clear();
-                            currentCalculation.add(item);
-                        } else {
-                            currentCalculation.add(item);
-                        }
-                    }
-                }
-
-                if (!currentCalculation.isEmpty()) {
-                    parsedCalculations.add(currentCalculation);
-                }
-            }
-
-            List<String> flatHeaders = expectedHeaders.stream()
-                    .map(header -> header.replace("[", "").replace("]", "").replace("\"", ""))
-                    .collect(Collectors.toList());
-
-            List<Map<String, Object>> resultList = new ArrayList<>();
-            List<Map<String, Object>> lastErrorList = new ArrayList<>();
-
-            if (!parsedCalculations.isEmpty()) {
-                for (List<String> calc : parsedCalculations) {
-                    List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, flatHeaders, null, calc);
-
-                    if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
-                        lastErrorList = tempResult;
-                    } else {
-                        resultList.addAll(tempResult);
-                    }
-                }
-            } else {
-                resultList = processRowsAndCalculations(sheet, flatHeaders, null, null);
-            }
-
-            return !lastErrorList.isEmpty() ? lastErrorList : (resultList.isEmpty() ? Collections.emptyList() : resultList);
+            return processSheet(sheet, flatHeaders, parsedCalculations);
 
         } catch (IOException e) {
             throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้", e);
         }
+    }
+
+    private void validateFile(MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("ไฟล์ว่างเปล่า ไม่สามารถอ่านข้อมูลได้");
+        }
+    }
+
+    private void validateSheet(Sheet sheet) {
+        if (isRowsEmpty(sheet)) {
+            throw new IllegalArgumentException("ไฟล์นี้ไม่มีข้อมูล");
+        }
+    }
+
+    private List<String> cleanHeaders(List<String> headers) {
+        return headers.stream()
+                .map(header -> header.replace("[", "").replace("]", "").replace("\"", ""))
+                .collect(Collectors.toList());
+    }
+
+    private List<List<String>> parseCalculations(List<String> calculater) {
+        List<List<String>> parsedCalculations = new ArrayList<>();
+        if (calculater == null || calculater.isEmpty()) {
+            return parsedCalculations;
+        }
+
+        List<String> currentCalculation = new ArrayList<>();
+        for (String item : calculater) {
+            item = item.replace("\"", "").replace("[", "").replace("]", "").trim();
+            if (!item.isEmpty()) {
+                if (item.equals("+") || item.equals("-")) {
+                    if (!currentCalculation.isEmpty()) {
+                        parsedCalculations.add(new ArrayList<>(currentCalculation));
+                    }
+                    currentCalculation.clear();
+                }
+                currentCalculation.add(item);
+            }
+        }
+        if (!currentCalculation.isEmpty()) {
+            parsedCalculations.add(currentCalculation);
+        }
+
+        return parsedCalculations;
+    }
+
+    private List<List<String>> parseRelations(List<String> relations) {
+        List<List<String>> parsedRelations = new ArrayList<>();
+        if (relations == null || relations.isEmpty()) {
+            return parsedRelations;
+        }
+
+        for (String item : relations) {
+            item = item.replace("\"", "").replace("[", "").replace("]", "").trim();
+            if (!item.isEmpty()) {
+                List<String> elements = Arrays.asList(item.split(","));
+                parsedRelations.add(elements);
+            }
+        }
+
+        return parsedRelations;
+    }
+
+    private List<Map<String, Object>> processSheet(Sheet sheet, List<String> headers, List<List<String>> calculations) {
+        List<Map<String, Object>> resultList = new ArrayList<>();
+        List<Map<String, Object>> lastErrorList = new ArrayList<>();
+
+        if (!calculations.isEmpty()) {
+            for (List<String> calc : calculations) {
+                List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null, calc);
+
+                if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
+                    lastErrorList = tempResult;
+                } else {
+                    resultList.addAll(tempResult);
+                }
+            }
+        } else {
+            resultList = processRowsAndCalculations(sheet, headers, null, null);
+        }
+
+        return !lastErrorList.isEmpty() ? lastErrorList : (resultList.isEmpty() ? Collections.emptyList() : resultList);
     }
 
     private List<Map<String, Object>> processRowsAndCalculations(Sheet sheet, List<String> headers, List<Integer> selectedIndices, List<String> calculation) {
