@@ -37,7 +37,7 @@ public class TemplateController {
 
         if (yamlData.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "❌ No templates found"));
+                    .body(Map.of("error", "No templates found"));
         }
 
         return ResponseEntity.ok(yamlData);
@@ -50,21 +50,21 @@ public class TemplateController {
 
             if (yamlData == null || yamlData.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "❌ No templates available in storage"));
+                        .body(Map.of("error", "No templates available in storage"));
             }
 
             Map<String, List<Map<String, Object>>> userTemplates = yamlData.get(userToken);
 
             if (userTemplates == null || userTemplates.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "❌ No templates found for user " + userToken));
+                        .body(Map.of("error", "No templates found for user " + userToken));
             }
 
             return ResponseEntity.ok(userTemplates);
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "⚠️ Failed to load templates: " + e.getMessage()));
+                    .body(Map.of("error", "⚠Failed to load templates: " + e.getMessage()));
         }
     }
 
@@ -75,14 +75,14 @@ public class TemplateController {
 
         if (userToken == null || templates == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", "❌ Invalid request data"));
+                    .body(Map.of("error", "Invalid request data"));
         }
 
         Map<String, Map<String, List<Map<String, Object>>>> yamlData = readYamlFromStorage();
 
         if (yamlData.containsKey(userToken)) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("error", "❌ User token already exists"));
+                    .body(Map.of("error", "User token already exists"));
         }
 
         yamlData.put(userToken, new HashMap<>());
@@ -90,8 +90,8 @@ public class TemplateController {
 
         saveYamlToStorage(yamlData);
 
-        System.out.println("✅ New user token added: " + userToken);
-        System.out.println("✅ User token updated successfully");
+        System.out.println("New user token added: " + userToken);
+        System.out.println("User token updated successfully");
         return ResponseEntity.ok(Map.of("message", "User token added successfully"));
     }
 
@@ -101,7 +101,7 @@ public class TemplateController {
 
         if (!yamlData.containsKey(userToken) || yamlData.get(userToken).get("templates") == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "❌ No templates found for user " + userToken));
+                    .body(Map.of("error", "No templates found for user " + userToken));
         }
 
         List<Map<String, Object>> templates = yamlData.get(userToken).get("templates");
@@ -109,12 +109,12 @@ public class TemplateController {
 
         if (!removed) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "❌ Template not found"));
+                    .body(Map.of("error", "Template not found"));
         }
 
         saveYamlToStorage(yamlData);
-        System.out.println("✅ Template deleted successfully");
-        return ResponseEntity.ok(Map.of("message", "✅ Template deleted successfully"));
+        System.out.println("Template deleted successfully");
+        return ResponseEntity.ok(Map.of("message", "Template deleted successfully"));
     }
 
     @PutMapping("/{userToken}/{templateName}")
@@ -124,7 +124,7 @@ public class TemplateController {
 
         if (!yamlData.containsKey(userToken) || yamlData.get(userToken).get("templates") == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "❌ No templates found for user " + userToken));
+                    .body(Map.of("error", "No templates found for user " + userToken));
         }
 
         List<Map<String, Object>> templates = yamlData.get(userToken).get("templates");
@@ -142,12 +142,12 @@ public class TemplateController {
 
         if (!updated) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "❌ Template not found"));
+                    .body(Map.of("error", "Template not found"));
         }
 
         saveYamlToStorage(yamlData);
-        System.out.println("✅ Template updated successfully");
-        return ResponseEntity.ok(Map.of("message", "✅ Template updated successfully"));
+        System.out.println("Template updated successfully");
+        return ResponseEntity.ok(Map.of("message", "Template updated successfully"));
     }
 
     @PostMapping
@@ -175,8 +175,8 @@ public class TemplateController {
         }
 
         saveYamlToStorage(yamlData);
-        System.out.println("✅ Template saved successfully");
-        return ResponseEntity.ok(Map.of("message", "✅ Template saved successfully"));
+        System.out.println("Template saved successfully");
+        return ResponseEntity.ok(Map.of("message", "Template saved successfully"));
     }
 
     private Map<String, Map<String, List<Map<String, Object>>>> readYamlFromStorage() {
@@ -216,64 +216,4 @@ public class TemplateController {
             e.printStackTrace();
         }
     }
-
-//    private File createYamlFile(TemplateRequest templateRequest) throws IOException {
-//        File file = new File(FILE_PATH);
-//        Map<String, Map<String, List<Map<String, Object>>>> yamlData = new HashMap<>();
-//
-//        LoaderOptions loaderOptions = new LoaderOptions();
-//        loaderOptions.setAllowRecursiveKeys(false);
-//
-//        if (file.exists() && file.length() > 0) {
-//            try (FileReader reader = new FileReader(file)) {
-//                Yaml yaml = new Yaml(new Constructor(HashMap.class, loaderOptions));
-//                Object loadedData = yaml.load(reader);
-//
-//                if (loadedData instanceof Map) {
-//                    yamlData = (Map<String, Map<String, List<Map<String, Object>>>>) loadedData;
-//                }
-//            } catch (Exception e) {
-//                System.out.println("⚠️ Error reading YAML file: " + e.getMessage());
-//                yamlData = new HashMap<>();
-//            }
-//        }
-//
-//        String userToken = templateRequest.getUserToken();
-//        yamlData.putIfAbsent(userToken, new HashMap<>());
-//        yamlData.get(userToken).putIfAbsent("templates", new ArrayList<>());
-//
-//        ObjectMapper objectMapper = new ObjectMapper();
-//        Map<String, Object> templateMap = objectMapper.convertValue(templateRequest, Map.class);
-//
-//        List<Map<String, Object>> templates = yamlData.get(userToken).get("templates");
-//
-//        boolean updated = false;
-//        for (int i = 0; i < templates.size(); i++) {
-//            Map<String, Object> existingTemplate = templates.get(i);
-//            if (existingTemplate.get("templatename").equals(templateRequest.getTemplatename())) {
-//                templates.set(i, templateMap);
-//                updated = true;
-//                break;
-//            }
-//        }
-//
-//        if (!updated) {
-//            templates.add(templateMap);
-//        }
-//
-//        DumperOptions options = new DumperOptions();
-//        options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
-//        options.setPrettyFlow(true);
-//        options.setExplicitStart(true);
-//
-//        Representer representer = new Representer(options);
-//        representer.addClassTag(Map.class, Tag.MAP);
-//
-//        Yaml yaml = new Yaml(representer, options);
-//        try (FileWriter writer = new FileWriter(file)) {
-//            yaml.dump(yamlData, writer);
-//        }
-//
-//        return file;
-//    }
 }

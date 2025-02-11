@@ -116,26 +116,27 @@ public class TemplateService {
         return parsedRelations;
     }
 
-
     private List<Map<String, Object>> processSheet(Sheet sheet, List<String> headers, List<List<String>> calculations) {
         List<Map<String, Object>> resultList = new ArrayList<>();
-        List<Map<String, Object>> lastErrorList = new ArrayList<>();
+        List<Map<String, Object>> allErrorList = new ArrayList<>();
 
         if (!calculations.isEmpty()) {
             for (List<String> calc : calculations) {
                 List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null, calc);
 
-                if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
-                    lastErrorList = tempResult;
-                } else {
-                    resultList.addAll(tempResult);
+                for (Map<String, Object> entry : tempResult) {
+                    if (entry.containsKey("summary")) {
+                        allErrorList.addAll(tempResult);
+                    } else {
+                        allErrorList.add(entry);
+                    }
                 }
             }
         } else {
-            resultList = processRowsAndCalculations(sheet, headers, null, null);
+            allErrorList = processRowsAndCalculations(sheet, headers, null, null);
         }
 
-        return !lastErrorList.isEmpty() ? lastErrorList : (resultList.isEmpty() ? Collections.emptyList() : resultList);
+        return allErrorList;
     }
 
     private List<Map<String, Object>> processRowsAndCalculations(Sheet sheet, List<String> headers, List<Integer> selectedIndices, List<String> calculation) {
@@ -159,6 +160,14 @@ public class TemplateService {
             operand = calculation.get(2).trim();
             resultKey = calculation.get(3).trim();
 
+            // ✅ พิมพ์ค่าที่ใช้ในการคำนวณ
+            System.out.println("------ ข้อมูลสำหรับการคำนวณ ------");
+            System.out.println("Operator: " + operator);
+            System.out.println("Addend: " + addend);
+            System.out.println("Operand: " + operand);
+            System.out.println("Result Key: " + resultKey);
+            System.out.println("--------------------------------");
+
             if (!headerIndexMap.containsKey(addend) || !headerIndexMap.containsKey(operand)) {
                 throw new IllegalArgumentException("หัวข้อที่ใช้คำนวณไม่ตรงกับข้อมูลในไฟล์");
             }
@@ -169,12 +178,16 @@ public class TemplateService {
             Map<String, Object> rowData = new HashMap<>();
             StringBuilder errorBuilder = new StringBuilder();
 
-            // การตรวจสอบค่าผิดปกติในแต่ละเซลล์
+            System.out.println("📌 แถวที่กำลังอ่าน: " + (i + 1));
+
             for (int colIndex = 0; colIndex < headers.size(); colIndex++) {
                 if (selectedIndices != null && !selectedIndices.contains(colIndex)) continue;
 
                 String header = headers.get(colIndex);
                 String cellValue = getCellValue(row.getCell(colIndex));
+
+                // ✅ พิมพ์ค่าที่ได้จากไฟล์
+                System.out.println("Column: " + colIndex + " | Header: " + header + " | Value: " + cellValue);
 
                 String errorMessage = validateCellAndGetMessage(header, cellValue);
                 if (!errorMessage.equals("success")) {
@@ -230,20 +243,17 @@ public class TemplateService {
                             errorList.add(errorDetails);
                             errorBuilder.append(calcError).append("; ");
 
-                            // เพิ่มข้อผิดพลาดการคำนวณใน summary
                             errorSummaryMap.put(row.getRowNum() + 1, errorBuilder.toString().trim());
                             System.out.println("ข้อผิดพลาด: " + calcError);
                         }
                     }
 
-                    // ถ้าไม่มีข้อผิดพลาดจากการคำนวณ เพิ่มข้อมูลใน rowData
                     if (errorBuilder.isEmpty()) {
                         rowData.put(resultKey, result);
                     }
                 }
             }
 
-            // เก็บข้อผิดพลาดใน summary ถ้ามีข้อผิดพลาด
             if (!errorBuilder.isEmpty()) {
                 errorSummaryMap.put(row.getRowNum() + 1, errorBuilder.toString().trim());
             } else {
@@ -251,7 +261,6 @@ public class TemplateService {
             }
         }
 
-        // ถ้ามีข้อผิดพลาด ส่งกลับผลลัพธ์ข้อผิดพลาด
         List<String> errorSummaryList = formatErrorMessages(errorSummaryMap);
 
         System.out.println("Error Summary List:");
@@ -260,7 +269,6 @@ public class TemplateService {
         }
 
         if (!errorList.isEmpty()) {
-            // ลบข้อผิดพลาดซ้ำ
             Set<Map<String, Object>> uniqueErrors = new HashSet<>(errorList);
 
             Map<String, Object> errorResponse = new HashMap<>();
@@ -271,7 +279,6 @@ public class TemplateService {
             return List.of(errorResponse);
         }
 
-        // คืนค่าผลลัพธ์ที่ไม่มีข้อผิดพลาด
         return resultList.isEmpty() || resultList.stream().allMatch(Map::isEmpty) ? Collections.emptyList() : resultList;
     }
 
