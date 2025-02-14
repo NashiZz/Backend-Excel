@@ -160,6 +160,7 @@ public class TemplateController {
 
         ObjectMapper objectMapper = new ObjectMapper();
         Map<String, Object> templateMap = objectMapper.convertValue(templateRequest, Map.class);
+        templateMap.remove("userToken");
         List<Map<String, Object>> templates = yamlData.get(userToken).get("templates");
 
         boolean updated = false;

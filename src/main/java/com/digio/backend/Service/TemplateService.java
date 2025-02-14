@@ -3,7 +3,6 @@ package com.digio.backend.Service;
 import com.digio.backend.Validate.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.poi.ss.usermodel.*;
-import org.springframework.asm.TypeReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -11,14 +10,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 public class TemplateService {
-
-    @Autowired
-    ConditionRelationServices conditionRelationServices;
 
     @Autowired
     ObjectMapper objectMapper;
@@ -45,7 +42,7 @@ public class TemplateService {
             System.out.println(parsedCalculations);
             System.out.println(parsedRelations);
 
-            return processSheet(sheet, flatHeaders, parsedCalculations);
+            return processSheet(sheet, flatHeaders, parsedRelations,  parsedCalculations);
 
         } catch (IOException e) {
             throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้", e);
@@ -96,6 +93,18 @@ public class TemplateService {
         return parsedCalculations;
     }
 
+    private List<String> parseExpression(String expression) {
+        List<String> tokens = new ArrayList<>();
+        Pattern pattern = Pattern.compile("\\d+|[+\\-x/=]");
+        Matcher matcher = pattern.matcher(expression.replace(" ", ""));
+
+        while (matcher.find()) {
+            tokens.add(matcher.group());
+        }
+
+        return tokens;
+    }
+
     private static List<List<String>> parseRelations(List<String> relations) {
         List<List<String>> parsedRelations = new ArrayList<>();
         if (relations == null || relations.isEmpty()) {
@@ -116,15 +125,71 @@ public class TemplateService {
         return parsedRelations;
     }
 
+    private double evaluateExpression(Map<String, Double> values, List<String> tokens) {
+        Stack<Double> operandStack = new Stack<>();
+        Stack<String> operatorStack = new Stack<>();
 
-    private List<Map<String, Object>> processSheet(Sheet sheet, List<String> headers, List<List<String>> calculations) {
+        Map<String, Integer> precedence = Map.of("+", 1, "-", 1, "x", 2, "/", 2);
+
+        for (String token : tokens) {
+            if (values.containsKey(token)) {
+                operandStack.push(values.get(token));
+            } else if (precedence.containsKey(token)) {
+                while (!operatorStack.isEmpty() && precedence.get(token) <= precedence.get(operatorStack.peek())) {
+                    double b = operandStack.pop();
+                    double a = operandStack.pop();
+                    operandStack.push(applyOperator(operatorStack.pop(), a, b));
+                }
+                operatorStack.push(token);
+            }
+        }
+
+        while (!operatorStack.isEmpty()) {
+            double b = operandStack.pop();
+            double a = operandStack.pop();
+            operandStack.push(applyOperator(operatorStack.pop(), a, b));
+        }
+
+        return operandStack.pop();
+    }
+
+    private double applyOperator(String operator, double a, double b) {
+        return switch (operator) {
+            case "+" -> a + b;
+            case "-" -> a - b;
+            case "x" -> a * b;
+            case "/" -> a / b;
+            default -> throw new IllegalArgumentException("Unsupported operator: " + operator);
+        };
+    }
+
+    private List<Map<String, Object>> processSheet(Sheet sheet, List<String> headers, List<List<String>> relation, List<List<String>> calculations) {
         List<Map<String, Object>> resultList = new ArrayList<>();
         List<Map<String, Object>> lastErrorList = new ArrayList<>();
 
-        if (!calculations.isEmpty()) {
+        if (calculations != null && !calculations.isEmpty() && relation != null && !relation.isEmpty()) {
             for (List<String> calc : calculations) {
-                List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null, calc);
-
+                for (List<String> rela : relation) {
+                    List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null, rela, calc);
+                    if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
+                        lastErrorList = tempResult;
+                    } else {
+                        resultList.addAll(tempResult);
+                    }
+                }
+            }
+        } else if (calculations != null && !calculations.isEmpty()) {
+            for (List<String> calc : calculations) {
+                List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null, null, calc);
+                if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
+                    lastErrorList = tempResult;
+                } else {
+                    resultList.addAll(tempResult);
+                }
+            }
+        } else if (relation != null && !relation.isEmpty()) {
+            for (List<String> rela : relation) {
+                List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null, rela, null);
                 if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
                     lastErrorList = tempResult;
                 } else {
@@ -132,13 +197,13 @@ public class TemplateService {
                 }
             }
         } else {
-            resultList = processRowsAndCalculations(sheet, headers, null, null);
+            resultList = processRowsAndCalculations(sheet, headers, null, null, null);
         }
 
         return !lastErrorList.isEmpty() ? lastErrorList : (resultList.isEmpty() ? Collections.emptyList() : resultList);
     }
 
-    private List<Map<String, Object>> processRowsAndCalculations(Sheet sheet, List<String> headers, List<Integer> selectedIndices, List<String> calculation) {
+    private List<Map<String, Object>> processRowsAndCalculations(Sheet sheet, List<String> headers, List<Integer> selectedIndices, List<String> relation, List<String> calculation) {
         List<Map<String, Object>> resultList = new ArrayList<>();
         List<Map<String, Object>> errorList = new ArrayList<>();
         Map<Integer, String> errorSummaryMap = new TreeMap<>();
@@ -159,7 +224,13 @@ public class TemplateService {
             operand = calculation.get(2).trim();
             resultKey = calculation.get(3).trim();
 
+            System.out.println("ตรวจสอบการคำนวณ:");
+            System.out.println("Addend: " + addend);
+            System.out.println("Operand: " + operand);
+            System.out.println("Header Index Map: " + headerIndexMap);
+
             if (!headerIndexMap.containsKey(addend) || !headerIndexMap.containsKey(operand)) {
+                System.out.println("ไม่พบหัวข้อที่ใช้คำนวณใน headerIndexMap");
                 throw new IllegalArgumentException("หัวข้อที่ใช้คำนวณไม่ตรงกับข้อมูลในไฟล์");
             }
         }
@@ -169,26 +240,30 @@ public class TemplateService {
             Map<String, Object> rowData = new HashMap<>();
             StringBuilder errorBuilder = new StringBuilder();
 
-            // การตรวจสอบค่าผิดปกติในแต่ละเซลล์
-            for (int colIndex = 0; colIndex < headers.size(); colIndex++) {
-                if (selectedIndices != null && !selectedIndices.contains(colIndex)) continue;
+            if (relation != null && !relation.isEmpty()) {
+                System.out.println("ตรวจสอบความสัมพันธ์ใน relation:");
 
-                String header = headers.get(colIndex);
-                String cellValue = getCellValue(row.getCell(colIndex));
+                    String column1 = relation.get(0).trim();
+                    String condition = relation.get(1).trim();
+                    String column2 = relation.get(2).trim();
 
-                String errorMessage = validateCellAndGetMessage(header, cellValue);
-                if (!errorMessage.equals("success")) {
-                    Map<String, Object> errorDetails = new HashMap<>();
-                    errorDetails.put("row", row.getRowNum());
-                    errorDetails.put("column", colIndex);
-                    errorDetails.put("header", header);
-                    errorDetails.put("message", errorMessage);
+                    System.out.println("Column1: " + column1);
+                    System.out.println("Condition: " + condition);
+                    System.out.println("Column2: " + column2);
 
-                    errorList.add(errorDetails);
-                    errorBuilder.append(errorMessage).append("; ");
-                }
+                    String value1 = getCell(row, headerIndexMap.get(column1));
+                    String value2 = getCell(row, headerIndexMap.get(column2));
+
+                    System.out.println("Value1: " + value1);
+                    System.out.println("Value2: " + value2);
+
+                    if (!checkRelation(value1, condition, value2)) {
+                        String relationError = "ไม่ตรงกับความสัมพันธ์: " + column1 + " " + condition + " " + column2;
+                        errorBuilder.append(relationError).append("; ");
+                    }
             }
 
+            // ทำงานกับการคำนวณหากมีการคำนวณ
             if (hasCalculation) {
                 double addendValue = getValue(row, headerIndexMap.get(addend));
                 double operandValue = getValue(row, headerIndexMap.get(operand));
@@ -230,20 +305,17 @@ public class TemplateService {
                             errorList.add(errorDetails);
                             errorBuilder.append(calcError).append("; ");
 
-                            // เพิ่มข้อผิดพลาดการคำนวณใน summary
                             errorSummaryMap.put(row.getRowNum() + 1, errorBuilder.toString().trim());
                             System.out.println("ข้อผิดพลาด: " + calcError);
                         }
                     }
 
-                    // ถ้าไม่มีข้อผิดพลาดจากการคำนวณ เพิ่มข้อมูลใน rowData
                     if (errorBuilder.isEmpty()) {
                         rowData.put(resultKey, result);
                     }
                 }
             }
 
-            // เก็บข้อผิดพลาดใน summary ถ้ามีข้อผิดพลาด
             if (!errorBuilder.isEmpty()) {
                 errorSummaryMap.put(row.getRowNum() + 1, errorBuilder.toString().trim());
             } else {
@@ -251,7 +323,6 @@ public class TemplateService {
             }
         }
 
-        // ถ้ามีข้อผิดพลาด ส่งกลับผลลัพธ์ข้อผิดพลาด
         List<String> errorSummaryList = formatErrorMessages(errorSummaryMap);
 
         System.out.println("Error Summary List:");
@@ -260,7 +331,6 @@ public class TemplateService {
         }
 
         if (!errorList.isEmpty()) {
-            // ลบข้อผิดพลาดซ้ำ
             Set<Map<String, Object>> uniqueErrors = new HashSet<>(errorList);
 
             Map<String, Object> errorResponse = new HashMap<>();
@@ -271,8 +341,42 @@ public class TemplateService {
             return List.of(errorResponse);
         }
 
-        // คืนค่าผลลัพธ์ที่ไม่มีข้อผิดพลาด
         return resultList.isEmpty() || resultList.stream().allMatch(Map::isEmpty) ? Collections.emptyList() : resultList;
+    }
+
+    private boolean checkRelation(String value1, String condition, String value2) {
+        System.out.println("ตรวจสอบค่าในแถว: " + value1 + " และ " + value2);
+
+        switch (condition.toLowerCase()) {
+            case "notempty":
+                return !value1.isEmpty() && !value2.isEmpty();  // ตรวจสอบไม่ให้ค่าว่าง
+            case "exists":
+                return checkExistence(value1, value2);  // ตรวจสอบว่าเป็นค่า "exists"
+            default:
+                throw new IllegalArgumentException("Unsupported condition: " + condition);
+        }
+    }
+
+    private boolean checkExistence(String column1Value, String column2Value) {
+        // ตัวอย่างการตรวจสอบว่า value2 (อำเภอ) ต้องอยู่ใน column1 (จังหวัด)
+        // สมมติว่าคุณมีฐานข้อมูลจังหวัดและอำเภอที่สามารถใช้ในการตรวจสอบนี้
+        // เช่น สามารถใช้ Map หรือฐานข้อมูลเพื่อเช็คว่าอำเภอนั้นๆ อยู่ในจังหวัดที่ระบุ
+        Map<String, List<String>> provinceToDistrictMap = getProvinceToDistrictMap(); // สมมติว่าเป็นฐานข้อมูลของจังหวัดและอำเภอ
+
+        // ตรวจสอบว่า value2 (อำเภอ) อยู่ในจังหวัด value1
+        List<String> districts = provinceToDistrictMap.get(column1Value);
+        return districts != null && districts.contains(column2Value);
+    }
+
+    private Map<String, List<String>> getProvinceToDistrictMap() {
+        // ตัวอย่างการสร้างข้อมูลจังหวัดและอำเภอ
+        // ควรจะดึงข้อมูลจริงจากฐานข้อมูลหรือแหล่งข้อมูลที่เหมาะสม
+        Map<String, List<String>> provinceToDistrictMap = new HashMap<>();
+        provinceToDistrictMap.put("อุดรธานี", Arrays.asList("เมืองอุดรธานี", "หนองหาน", "กุมภวาปี"));
+        provinceToDistrictMap.put("กรุงเทพมหานคร", Arrays.asList("บางรัก", "พระนคร", "ดินแดง"));
+        // เพิ่มจังหวัดและอำเภอในลักษณะนี้
+
+        return provinceToDistrictMap;
     }
 
     private boolean isRowsEmpty(Sheet sheet) {
@@ -287,6 +391,23 @@ public class TemplateService {
             }
         }
         return true;
+    }
+
+    private String getCell(Row row, int columnIndex) {
+        Cell cell = row.getCell(columnIndex);
+        if (cell == null) {
+            return "";
+        }
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue();
+            case NUMERIC:
+                return String.valueOf(cell.getNumericCellValue());
+            case BOOLEAN:
+                return String.valueOf(cell.getBooleanCellValue());
+            default:
+                return "";
+        }
     }
 
     private double getValue(Row row, int cellIndex) {

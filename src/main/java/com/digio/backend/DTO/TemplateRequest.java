@@ -146,7 +146,6 @@ public class TemplateRequest {
             private String column1;
             private String condition;
             private String column2;
-            private String condition2;
 
             public String getColumn1() {
                 return column1;
@@ -170,14 +169,6 @@ public class TemplateRequest {
 
             public void setColumn2(String column2) {
                 this.column2 = column2;
-            }
-
-            public String getCondition2() {
-                return condition2;
-            }
-
-            public void setCondition2(String condition2) {
-                this.condition2 = condition2;
             }
         }
     }
