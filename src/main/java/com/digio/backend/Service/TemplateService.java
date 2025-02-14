@@ -240,30 +240,59 @@ public class TemplateService {
             Map<String, Object> rowData = new HashMap<>();
             StringBuilder errorBuilder = new StringBuilder();
 
+            for (int colIndex = 0; colIndex < headers.size(); colIndex++) {
+                if (selectedIndices != null && !selectedIndices.contains(colIndex)) continue;
+
+                String header = headers.get(colIndex);
+                String cellValue = getCellValue(row.getCell(colIndex));
+
+                String errorMessage = validateCellAndGetMessage(header, cellValue);
+                if (!errorMessage.equals("success")) {
+                    Map<String, Object> errorDetails = new HashMap<>();
+                    errorDetails.put("row", row.getRowNum());
+                    errorDetails.put("column", colIndex);
+                    errorDetails.put("header", header);
+                    errorDetails.put("message", errorMessage);
+
+                    errorList.add(errorDetails);
+                    errorBuilder.append(errorMessage).append("; ");
+                }
+            }
+
             if (relation != null && !relation.isEmpty()) {
                 System.out.println("ตรวจสอบความสัมพันธ์ใน relation:");
 
-                    String column1 = relation.get(0).trim();
-                    String condition = relation.get(1).trim();
-                    String column2 = relation.get(2).trim();
+                String column1 = relation.get(0).trim();
+                String condition = relation.get(1).trim();
+                String column2 = relation.get(2).trim();
 
-                    System.out.println("Column1: " + column1);
-                    System.out.println("Condition: " + condition);
-                    System.out.println("Column2: " + column2);
+                System.out.println("Column1: " + column1);
+                System.out.println("Condition: " + condition);
+                System.out.println("Column2: " + column2);
 
-                    String value1 = getCell(row, headerIndexMap.get(column1));
-                    String value2 = getCell(row, headerIndexMap.get(column2));
+                String value1 = getCell(row, headerIndexMap.get(column1));
+                String value2 = getCell(row, headerIndexMap.get(column2));
 
-                    System.out.println("Value1: " + value1);
-                    System.out.println("Value2: " + value2);
+                System.out.println("Value1: " + value1);
+                System.out.println("Value2: " + value2);
 
-                    if (!checkRelation(value1, condition, value2)) {
-                        String relationError = "ไม่ตรงกับความสัมพันธ์: " + column1 + " " + condition + " " + column2;
-                        errorBuilder.append(relationError).append("; ");
-                    }
+                if (!checkRelation(value1, condition, value2)) {
+                    String relationError = "ไม่ตรงกับความสัมพันธ์: " + column1 + " " + condition + " " + column2;
+
+                    Map<String, Object> errorDetails = new HashMap<>();
+
+                    errorDetails.put("row", row.getRowNum());
+                    errorDetails.put("column", headerIndexMap.get(column1));
+                    errorDetails.put("header", headerIndexMap.get(column1));
+                    errorDetails.put("message", relationError);
+
+                    errorList.add(errorDetails);
+
+                    errorBuilder.append(relationError).append("; ");
+                    errorSummaryMap.put(row.getRowNum() + 1, errorBuilder.toString().trim());
+                }
             }
 
-            // ทำงานกับการคำนวณหากมีการคำนวณ
             if (hasCalculation) {
                 double addendValue = getValue(row, headerIndexMap.get(addend));
                 double operandValue = getValue(row, headerIndexMap.get(operand));
