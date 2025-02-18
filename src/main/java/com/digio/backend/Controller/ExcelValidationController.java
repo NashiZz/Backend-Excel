@@ -75,10 +75,6 @@ public class ExcelValidationController {
         ResponseEntity<?> fileValidation = validateFile(file);
         if (fileValidation != null) return fileValidation;
 
-        System.out.println("expected" + expectedHeaders);
-        System.out.println("calculater" + calculater);
-        System.out.println("relation" + relation);
-
         try {
             List<Map<String, Object>> validationErrors = templateService.handleUploadWithTemplate(file, expectedHeaders, calculater, relation);
 

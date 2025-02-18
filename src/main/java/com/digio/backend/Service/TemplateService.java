@@ -93,18 +93,6 @@ public class TemplateService {
         return parsedCalculations;
     }
 
-    private List<String> parseExpression(String expression) {
-        List<String> tokens = new ArrayList<>();
-        Pattern pattern = Pattern.compile("\\d+|[+\\-x/=]");
-        Matcher matcher = pattern.matcher(expression.replace(" ", ""));
-
-        while (matcher.find()) {
-            tokens.add(matcher.group());
-        }
-
-        return tokens;
-    }
-
     private static List<List<String>> parseRelations(List<String> relations) {
         List<List<String>> parsedRelations = new ArrayList<>();
         if (relations == null || relations.isEmpty()) {
@@ -123,44 +111,6 @@ public class TemplateService {
         }
 
         return parsedRelations;
-    }
-
-    private double evaluateExpression(Map<String, Double> values, List<String> tokens) {
-        Stack<Double> operandStack = new Stack<>();
-        Stack<String> operatorStack = new Stack<>();
-
-        Map<String, Integer> precedence = Map.of("+", 1, "-", 1, "x", 2, "/", 2);
-
-        for (String token : tokens) {
-            if (values.containsKey(token)) {
-                operandStack.push(values.get(token));
-            } else if (precedence.containsKey(token)) {
-                while (!operatorStack.isEmpty() && precedence.get(token) <= precedence.get(operatorStack.peek())) {
-                    double b = operandStack.pop();
-                    double a = operandStack.pop();
-                    operandStack.push(applyOperator(operatorStack.pop(), a, b));
-                }
-                operatorStack.push(token);
-            }
-        }
-
-        while (!operatorStack.isEmpty()) {
-            double b = operandStack.pop();
-            double a = operandStack.pop();
-            operandStack.push(applyOperator(operatorStack.pop(), a, b));
-        }
-
-        return operandStack.pop();
-    }
-
-    private double applyOperator(String operator, double a, double b) {
-        return switch (operator) {
-            case "+" -> a + b;
-            case "-" -> a - b;
-            case "x" -> a * b;
-            case "/" -> a / b;
-            default -> throw new IllegalArgumentException("Unsupported operator: " + operator);
-        };
     }
 
     private List<Map<String, Object>> processSheet(Sheet sheet, List<String> headers, List<List<String>> relation, List<List<String>> calculations) {
