@@ -5,8 +5,8 @@
 
 ## เทคโนโลยีที่ใช้
 **Spring Boot** - ใช้เป็น Backend หลักของระบบ
-**Firebase Storage** - ใช้สำหรับเก็บไฟล์ Template และไฟล์ที่อัปโหลด
 **Apache POI** - ใช้สำหรับอ่านและแปลงข้อมูลจากไฟล์ Excel
+**Firebase Storage** - ใช้สำหรับเก็บไฟล์ Template และไฟล์ที่อัปโหลด
 
 ## การติดตั้งและใช้งาน
 ### Clone Repository
