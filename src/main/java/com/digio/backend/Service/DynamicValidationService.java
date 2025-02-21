@@ -237,6 +237,8 @@ public class DynamicValidationService {
         validationRules.put(Pattern.compile("^(อีเมล|email).*$"), EmailValidate::validate);
         validationRules.put(Pattern.compile("^(บัตรประชาชน|citizenid).*$"), CitizenIdValidator::validate);
         validationRules.put(Pattern.compile("^(เบอร์โทร|phone).*$"), PhoneValidator::validate);
+        validationRules.put(Pattern.compile("^(จังหวัด|provice).*$"), ProvinceValidator::validateProvince);
+        validationRules.put(Pattern.compile("^(อำเภอ|district).*$"), DistrictValidator::validateDistrict);
         validationRules.put(Pattern.compile("^(ที่อยู่|address).*$"), AddressValidator::validate);
         validationRules.put(Pattern.compile("^(อายุ|age).*$"), AgeValidator::validateDateOfBirth);
         validationRules.put(Pattern.compile("^(เพศ|gender).*$"), GenderValidator::validateGender);

@@ -81,23 +81,8 @@ public class TemplateRequest {
     @NoArgsConstructor
     public static class Condition {
         private List<Calculation> calculations;
+        private List<Compare> compares;
         private List<Relation> relations;
-
-        public List<Calculation> getCalculations() {
-            return calculations;
-        }
-
-        public void setCalculations(List<Calculation> calculations) {
-            this.calculations = calculations;
-        }
-
-        public List<Relation> getRelations() {
-            return relations;
-        }
-
-        public void setRelations(List<Relation> relations) {
-            this.relations = relations;
-        }
 
         @Data
         @NoArgsConstructor
@@ -137,6 +122,38 @@ public class TemplateRequest {
 
             public void setResult(String result) {
                 this.result = result;
+            }
+        }
+
+        @Data
+        @NoArgsConstructor
+        public static class Compare {
+            private String type;
+            private String addend;
+            private String operand;
+
+            public String getType() {
+                return type;
+            }
+
+            public void setType(String type) {
+                this.type = type;
+            }
+
+            public String getAddend() {
+                return addend;
+            }
+
+            public void setAddend(String addend) {
+                this.addend = addend;
+            }
+
+            public String getOperand() {
+                return operand;
+            }
+
+            public void setOperand(String operand) {
+                this.operand = operand;
             }
         }
 

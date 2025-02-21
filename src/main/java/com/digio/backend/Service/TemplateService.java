@@ -218,7 +218,7 @@ public class TemplateService {
 
         if (!checkRelation(value1, condition, value2)) {
             String relationError = "ไม่ตรงกับความสัมพันธ์: " + column1 + " " + condition + " " + column2;
-            addErrorDetails(row, headerIndexMap.get(column1), column1, relationError, errorList);
+            addErrorDetails(row, headerIndexMap.get(column2), column2, relationError, errorList);
             errorBuilder.append(relationError).append("; ");
         }
     }
@@ -406,6 +406,8 @@ public class TemplateService {
         validationRules.put(Pattern.compile("^(อีเมล|email).*$"), EmailValidate::validate);
         validationRules.put(Pattern.compile("^(บัตรประชาชน|citizenid).*$"), CitizenIdValidator::validate);
         validationRules.put(Pattern.compile("^(เบอร์โทร|phone).*$"), PhoneValidator::validate);
+        validationRules.put(Pattern.compile("^(จังหวัด|provice).*$"), ProvinceValidator::validateProvince);
+        validationRules.put(Pattern.compile("^(อำเภอ|district).*$"), DistrictValidator::validateDistrict);
         validationRules.put(Pattern.compile("^(ที่อยู่|address).*$"), AddressValidator::validate);
         validationRules.put(Pattern.compile("^(อายุ|age).*$"), AgeValidator::validateDateOfBirth);
         validationRules.put(Pattern.compile("^(เพศ|gender).*$"), GenderValidator::validateGender);
