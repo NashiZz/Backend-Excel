@@ -27,7 +27,7 @@ public class TemplateService {
     }
 
     public List<Map<String, Object>> handleUploadWithTemplate(
-            MultipartFile file, List<String> expectedHeaders, List<String> calculater, List<String> relation) {
+            MultipartFile file, List<String> expectedHeaders, List<String> calculater, List<String> relation, List<String> compare) {
 
         validateFile(file);
 
@@ -37,12 +37,14 @@ public class TemplateService {
 
             List<List<String>> parsedCalculations = parseCalculations(calculater);
             List<List<String>> parsedRelations = parseRelations(relation);
+            List<List<String>> parsedCompares = parseCompares(compare);
             List<String> flatHeaders = cleanHeaders(expectedHeaders);
 
             System.out.println(parsedCalculations);
             System.out.println(parsedRelations);
+            System.out.println(parsedCompares);
 
-            return processSheet(sheet, flatHeaders, parsedRelations,  parsedCalculations);
+            return processSheet(sheet, flatHeaders, parsedRelations,  parsedCalculations, parsedCompares);
 
         } catch (IOException e) {
             throw new IllegalArgumentException("ไม่สามารถอ่านไฟล์ Excel ได้", e);
@@ -113,33 +115,70 @@ public class TemplateService {
         return parsedRelations;
     }
 
-    private List<Map<String, Object>> processSheet(Sheet sheet, List<String> headers, List<List<String>> relation, List<List<String>> calculations) {
+    private List<List<String>> parseCompares(List<String> compare) {
+        List<List<String>> parsedCompares = new ArrayList<>();
+        if (compare == null || compare.isEmpty()) {
+            return parsedCompares;
+        }
+
+        List<String> currentCompare = new ArrayList<>();
+        for (String item : compare) {
+            item = item.replace("\"", "").replace("[", "").replace("]", "").trim();
+            if (!item.isEmpty()) {
+                if (item.equals("<") || item.equals(">")) {
+                    if (!currentCompare.isEmpty()) {
+                        parsedCompares.add(new ArrayList<>(currentCompare));
+                    }
+                    currentCompare.clear();
+                }
+                currentCompare.add(item);
+            }
+        }
+        if (!currentCompare.isEmpty()) {
+            parsedCompares.add(currentCompare);
+        }
+
+        return parsedCompares;
+    }
+
+    private List<Map<String, Object>> processSheet(Sheet sheet, List<String> headers, List<List<String>> relation, List<List<String>> calculations, List<List<String>> compares) {
         List<Map<String, Object>> resultList = new ArrayList<>();
         List<Map<String, Object>> lastErrorList = new ArrayList<>();
 
         if (calculations != null && !calculations.isEmpty() && relation != null && !relation.isEmpty()) {
             for (List<String> calc : calculations) {
                 for (List<String> rela : relation) {
-                    List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null, rela, calc);
-                    if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
-                        lastErrorList = tempResult;
-                    } else {
-                        resultList.addAll(tempResult);
+                    for (List<String> comp : compares) {
+                        List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null, rela, calc, comp);
+                        if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
+                            lastErrorList = tempResult;
+                        } else {
+                            resultList.addAll(tempResult);
+                        }
                     }
                 }
             }
         } else if (calculations != null && !calculations.isEmpty()) {
             for (List<String> calc : calculations) {
-                List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null, null, calc);
+                List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null, null, calc, null);
                 if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
                     lastErrorList = tempResult;
                 } else {
                     resultList.addAll(tempResult);
                 }
             }
-        } else if (relation != null && !relation.isEmpty()) {
+        }  else if (relation != null && !relation.isEmpty()) {
             for (List<String> rela : relation) {
-                List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null, rela, null);
+                List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null, rela, null, null);
+                if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
+                    lastErrorList = tempResult;
+                } else {
+                    resultList.addAll(tempResult);
+                }
+            }
+        } else if (compares != null && !compares.isEmpty()) {
+            for (List<String> comp : compares) {
+                List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null,null,null, comp);
                 if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
                     lastErrorList = tempResult;
                 } else {
@@ -147,13 +186,13 @@ public class TemplateService {
                 }
             }
         } else {
-            resultList = processRowsAndCalculations(sheet, headers, null, null, null);
+            resultList = processRowsAndCalculations(sheet, headers, null, null, null, null);
         }
 
         return !lastErrorList.isEmpty() ? lastErrorList : (resultList.isEmpty() ? Collections.emptyList() : resultList);
     }
 
-    private List<Map<String, Object>> processRowsAndCalculations(Sheet sheet, List<String> headers, List<Integer> selectedIndices, List<String> relation, List<String> calculation) {
+    private List<Map<String, Object>> processRowsAndCalculations(Sheet sheet, List<String> headers, List<Integer> selectedIndices, List<String> relation, List<String> calculation, List<String> compare) {
         List<Map<String, Object>> resultList = new ArrayList<>();
         List<Map<String, Object>> errorList = new ArrayList<>();
         Map<Integer, String> errorSummaryMap = new TreeMap<>();
@@ -173,6 +212,7 @@ public class TemplateService {
             processRowValidation(row, headers, selectedIndices, errorList, errorBuilder, headerIndexMap);
             if (relation != null && !relation.isEmpty()) checkRelation(row, relation, errorList, errorBuilder, headerIndexMap);
             if (hasCalculation) processCalculation(row, operator, addend, operand, resultKey, rowData, errorList, errorBuilder, headerIndexMap);
+            if (compare != null && compare.size() == 3) processComparison(row, compare, errorList, errorBuilder, headerIndexMap);
 
             if (!errorBuilder.isEmpty()) {
                 errorSummaryMap.put(row.getRowNum() + 1, errorBuilder.toString().trim());
@@ -205,6 +245,27 @@ public class TemplateService {
                 addErrorDetails(row, colIndex, header, errorMessage, errorList);
                 errorBuilder.append(errorMessage).append("; ");
             }
+        }
+    }
+
+    private void processComparison(Row row, List<String> compare, List<Map<String, Object>> errorList, StringBuilder errorBuilder, Map<String, Integer> headerIndexMap) {
+        String operator = compare.get(0).trim();
+        String column1 = compare.get(1).trim();
+        String column2 = compare.get(2).trim();
+
+        double value1 = getValue(row, headerIndexMap.get(column1));
+        double value2 = getValue(row, headerIndexMap.get(column2));
+
+        boolean isValid = switch (operator) {
+            case ">" -> value1 > value2;
+            case "<" -> value1 < value2;
+            default -> throw new IllegalArgumentException("ไม่รองรับตัวดำเนินการเปรียบเทียบ: " + operator);
+        };
+
+        if (!isValid) {
+            String comparisonError = column1 + " ต้อง " + operator + " " + column2 + " แต่พบ " + value1 + " และ " + value2;
+            addErrorDetails(row, headerIndexMap.get(column1), column1, comparisonError, errorList);
+            errorBuilder.append(comparisonError).append("; ");
         }
     }
 

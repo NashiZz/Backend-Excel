@@ -70,7 +70,8 @@ public class ExcelValidationController {
             @RequestParam("file") MultipartFile file,
             @RequestParam("condition") List<String> expectedHeaders,
             @RequestParam("calculater") List<String> calculater,
-            @RequestParam("relation") List<String> relation) {
+            @RequestParam("relation") List<String> relation,
+            @RequestParam("compare") List<String> compare) {
 
         ResponseEntity<?> fileValidation = validateFile(file);
         if (fileValidation != null) return fileValidation;
@@ -78,9 +79,10 @@ public class ExcelValidationController {
         System.out.println(expectedHeaders);
         System.out.println(calculater);
         System.out.println(relation);
+        System.out.println(compare);
 
         try {
-            List<Map<String, Object>> validationErrors = templateService.handleUploadWithTemplate(file, expectedHeaders, calculater, relation);
+            List<Map<String, Object>> validationErrors = templateService.handleUploadWithTemplate(file, expectedHeaders, calculater, relation, compare);
 
             System.out.println(validationErrors);
             if (validationErrors.isEmpty() || !validationErrors.get(0).containsKey("summary")) {
