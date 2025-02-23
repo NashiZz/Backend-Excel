@@ -145,7 +145,7 @@ public class TemplateService {
         List<Map<String, Object>> resultList = new ArrayList<>();
         List<Map<String, Object>> lastErrorList = new ArrayList<>();
 
-        if (calculations != null && !calculations.isEmpty() && relation != null && !relation.isEmpty()) {
+        if (calculations != null && !calculations.isEmpty() && relation != null && !relation.isEmpty() && compares != null && !compares.isEmpty()) {
             for (List<String> calc : calculations) {
                 for (List<String> rela : relation) {
                     for (List<String> comp : compares) {
