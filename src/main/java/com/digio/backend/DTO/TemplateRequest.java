@@ -84,6 +84,30 @@ public class TemplateRequest {
         private List<Compare> compares;
         private List<Relation> relations;
 
+        public List<Calculation> getCalculations() {
+            return calculations;
+        }
+
+        public void setCalculations(List<Calculation> calculations) {
+            this.calculations = calculations;
+        }
+
+        public List<Compare> getCompares() {
+            return compares;
+        }
+
+        public void setCompares(List<Compare> compares) {
+            this.compares = compares;
+        }
+
+        public List<Relation> getRelations() {
+            return relations;
+        }
+
+        public void setRelations(List<Relation> relations) {
+            this.relations = relations;
+        }
+
         @Data
         @NoArgsConstructor
         public static class Calculation {
