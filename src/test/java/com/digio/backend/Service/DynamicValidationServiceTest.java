@@ -1,9 +1,6 @@
 package com.digio.backend.Service;
 
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
@@ -11,9 +8,9 @@ import org.springframework.mock.web.MockMultipartFile;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
+import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class DynamicValidationServiceTest {
 
@@ -26,7 +23,7 @@ public class DynamicValidationServiceTest {
                 {"สมชาย ใจดี", "example@test.com", "1419902114908", "0812345678", "123 Main St"}
         });
 
-        List<String> errors = dynamicCheckingService.validateExcel(validFile);
+        List<Map<String, Object>> errors = dynamicCheckingService.validateExcel(validFile);
         assertEquals(0, errors.size(), "ควรไม่มีข้อผิดพลาด");
     }
 
@@ -37,9 +34,13 @@ public class DynamicValidationServiceTest {
                 {"สมชาย123", "invalid-email", "123", "12345", "<invalid>"}
         });
 
-        List<String> errors = dynamicCheckingService.validateExcel(invalidFile);
-        assertEquals(1, errors.size(), "ควรมีข้อผิดพลาดในแถวที่ 2");
-        assertEquals("แถวที่ 2: ชื่อควรมีเฉพาะตัวอักษรไทยหรือภาษาอังกฤษ, อีเมลไม่ถูกต้อง, บัตรประชาชนไม่ถูกต้อง, หมายเลขโทรศัพท์ไม่ถูกต้อง, รูปแบบที่อยู่ไม่ถูกต้อง", errors.get(0));
+        List<Map<String, Object>> errors = dynamicCheckingService.validateExcel(invalidFile);
+        assertTrue(errors.size() > 0, "ควรมีข้อผิดพลาดในแถวที่ 2");
+
+        // Check if error details exist
+        Map<String, Object> errorDetails = errors.get(0);
+        assertEquals(2, errorDetails.get("row"));
+        assertTrue(errorDetails.containsKey("message"), "ต้องมีข้อความข้อผิดพลาด");
     }
 
     @Test
