@@ -16,6 +16,29 @@ git clone https://github.com/NashiZz/Backend-Excel.git
 cd Backend-Excel
 ```
 
+## ตั้งค่าไฟล์ Config
+```sh
+public class WebConfig {
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins("http://localhost:3000") // ใส่เป็น web local ของตัวเอง
+                        .allowedMethods("GET", "POST", "PUT", "DELETE")
+                        .allowedHeaders("*");
+            }
+        };
+    }
+}
+```
+
+## รันโปรเจกต์
+```sh
+mvn spring-boot:run
+```
+
 ## โครงสร้างโฟลเดอร์
 ```
 Backend-Excel/
@@ -26,7 +49,13 @@ Backend-Excel/
 ├── validate/          # ตรวจสอบความถูกต้องของข้อมูลที่รับเข้ามาใน API
 ```
 
+## Contributor
+หากต้องการ Merge Code เข้า Repository นี้ สามารถทำได้โดย
+
 ## ผู้พัฒนา
 - **Nashi**
 - **Depttt**
+
+
+
 
