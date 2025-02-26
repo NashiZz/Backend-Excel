@@ -126,7 +126,6 @@ public class TemplateController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "No templates found for user " + userToken));
         }
-
         List<Map<String, Object>> templates = yamlData.get(userToken).get("templates");
         ObjectMapper objectMapper = new ObjectMapper();
         Map<String, Object> updatedTemplate = objectMapper.convertValue(templateRequest, Map.class);
@@ -139,14 +138,12 @@ public class TemplateController {
                 break;
             }
         }
-
         if (!updated) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "Template not found"));
         }
 
         saveYamlToStorage(yamlData);
-        System.out.println("Template updated successfully");
         return ResponseEntity.ok(Map.of("message", "Template updated successfully"));
     }
 
@@ -163,20 +160,9 @@ public class TemplateController {
         templateMap.remove("userToken");
         List<Map<String, Object>> templates = yamlData.get(userToken).get("templates");
 
-        boolean updated = false;
-        for (int i = 0; i < templates.size(); i++) {
-            if (templates.get(i).get("templatename").equals(templateRequest.getTemplatename())) {
-                templates.set(i, templateMap);
-                updated = true;
-                break;
-            }
-        }
-        if (!updated) {
-            templates.add(templateMap);
-        }
+        templates.add(templateMap);
 
         saveYamlToStorage(yamlData);
-        System.out.println("Template saved successfully");
         return ResponseEntity.ok(Map.of("message", "Template saved successfully"));
     }
 

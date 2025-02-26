@@ -39,10 +39,7 @@ public class TemplateService {
             List<List<String>> parsedRelations = parseRelations(relation);
             List<List<String>> parsedCompares = parseCompares(compare);
             List<String> flatHeaders = cleanHeaders(expectedHeaders);
-
             System.out.println(parsedCalculations);
-            System.out.println(parsedRelations);
-            System.out.println(parsedCompares);
 
             return processSheet(sheet, flatHeaders, parsedRelations,  parsedCalculations, parsedCompares);
 
@@ -141,15 +138,18 @@ public class TemplateService {
         return parsedCompares;
     }
 
-    private List<Map<String, Object>> processSheet(Sheet sheet, List<String> headers, List<List<String>> relation, List<List<String>> calculations, List<List<String>> compares) {
+    private List<Map<String, Object>> processSheet(Sheet sheet, List<String> headers, List<List<String>> relation,
+                                                   List<List<String>> calculations, List<List<String>> compares) {
         List<Map<String, Object>> resultList = new ArrayList<>();
         List<Map<String, Object>> lastErrorList = new ArrayList<>();
 
-        if (calculations != null && !calculations.isEmpty() && relation != null && !relation.isEmpty() && compares != null && !compares.isEmpty()) {
+        if (calculations != null && !calculations.isEmpty() && relation != null && !relation.isEmpty() &&
+                compares != null && !compares.isEmpty()) {
             for (List<String> calc : calculations) {
                 for (List<String> rela : relation) {
                     for (List<String> comp : compares) {
-                        List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null, rela, calc, comp);
+                        List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers,
+                                null, rela, calc, comp);
                         if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
                             lastErrorList = tempResult;
                         } else {
@@ -160,7 +160,8 @@ public class TemplateService {
             }
         } else if (calculations != null && !calculations.isEmpty()) {
             for (List<String> calc : calculations) {
-                List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null, null, calc, null);
+                List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers,
+                        null, null, calc, null);
                 if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
                     lastErrorList = tempResult;
                 } else {
@@ -169,7 +170,8 @@ public class TemplateService {
             }
         }  else if (relation != null && !relation.isEmpty()) {
             for (List<String> rela : relation) {
-                List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null, rela, null, null);
+                List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers,
+                        null, rela, null, null);
                 if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
                     lastErrorList = tempResult;
                 } else {
@@ -178,7 +180,8 @@ public class TemplateService {
             }
         } else if (compares != null && !compares.isEmpty()) {
             for (List<String> comp : compares) {
-                List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers, null,null,null, comp);
+                List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers,
+                        null,null,null, comp);
                 if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
                     lastErrorList = tempResult;
                 } else {
@@ -186,13 +189,15 @@ public class TemplateService {
                 }
             }
         } else {
-            resultList = processRowsAndCalculations(sheet, headers, null, null, null, null);
+            resultList = processRowsAndCalculations(sheet, headers,
+                    null, null, null, null);
         }
 
         return !lastErrorList.isEmpty() ? lastErrorList : (resultList.isEmpty() ? Collections.emptyList() : resultList);
     }
 
-    private List<Map<String, Object>> processRowsAndCalculations(Sheet sheet, List<String> headers, List<Integer> selectedIndices, List<String> relation, List<String> calculation, List<String> compare) {
+    private List<Map<String, Object>> processRowsAndCalculations(Sheet sheet, List<String> headers,
+                 List<Integer> selectedIndices, List<String> relation, List<String> calculation, List<String> compare) {
         List<Map<String, Object>> resultList = new ArrayList<>();
         List<Map<String, Object>> errorList = new ArrayList<>();
         Map<Integer, String> errorSummaryMap = new TreeMap<>();
@@ -211,7 +216,8 @@ public class TemplateService {
 
             processRowValidation(row, headers, selectedIndices, errorList, errorBuilder, headerIndexMap);
             if (relation != null && !relation.isEmpty()) checkRelation(row, relation, errorList, errorBuilder, headerIndexMap);
-            if (hasCalculation) processCalculation(row, operator, addend, operand, resultKey, rowData, errorList, errorBuilder, headerIndexMap);
+            if (hasCalculation) processCalculation(row, operator, addend, operand, resultKey,
+                    rowData, errorList, errorBuilder, headerIndexMap);
             if (compare != null && compare.size() == 3) processComparison(row, compare, errorList, errorBuilder, headerIndexMap);
 
             if (!errorBuilder.isEmpty()) {
@@ -233,7 +239,8 @@ public class TemplateService {
         return headerIndexMap;
     }
 
-    private void processRowValidation(Row row, List<String> headers, List<Integer> selectedIndices, List<Map<String, Object>> errorList, StringBuilder errorBuilder, Map<String, Integer> headerIndexMap) {
+    private void processRowValidation(Row row, List<String> headers, List<Integer> selectedIndices,
+                  List<Map<String, Object>> errorList, StringBuilder errorBuilder, Map<String, Integer> headerIndexMap) {
         for (int colIndex = 0; colIndex < headers.size(); colIndex++) {
             if (selectedIndices != null && !selectedIndices.contains(colIndex)) continue;
 
@@ -248,7 +255,8 @@ public class TemplateService {
         }
     }
 
-    private void processComparison(Row row, List<String> compare, List<Map<String, Object>> errorList, StringBuilder errorBuilder, Map<String, Integer> headerIndexMap) {
+    private void processComparison(Row row, List<String> compare, List<Map<String, Object>> errorList,
+                                   StringBuilder errorBuilder, Map<String, Integer> headerIndexMap) {
         String operator = compare.get(0).trim();
         String column1 = compare.get(1).trim();
         String column2 = compare.get(2).trim();
@@ -269,7 +277,8 @@ public class TemplateService {
         }
     }
 
-    private void checkRelation(Row row, List<String> relation, List<Map<String, Object>> errorList, StringBuilder errorBuilder, Map<String, Integer> headerIndexMap) {
+    private void checkRelation(Row row, List<String> relation, List<Map<String, Object>> errorList,
+                               StringBuilder errorBuilder, Map<String, Integer> headerIndexMap) {
         String column1 = relation.get(0).trim();
         String condition = relation.get(1).trim();
         String column2 = relation.get(2).trim();
@@ -278,16 +287,20 @@ public class TemplateService {
         String value2 = getCell(row, headerIndexMap.get(column2));
 
         if (!checkRelation(value1, condition, value2)) {
-            String relationError = "ไม่ตรงกับความสัมพันธ์: " + column1 + " " + condition + " " + column2;
+            String relationError = "ไม่ตรงกับความสัมพันธ์: " + value1 + " " + condition + " " + value2;
             addErrorDetails(row, headerIndexMap.get(column2), column2, relationError, errorList);
             errorBuilder.append(relationError).append("; ");
         }
     }
 
-    private void processCalculation(Row row, String operator, String addend, String operand, String resultKey, Map<String, Object> rowData, List<Map<String, Object>> errorList, StringBuilder errorBuilder, Map<String, Integer> headerIndexMap) {
+    private void processCalculation(Row row, String operator, String addend, String operand,
+                                    String resultKey, Map<String, Object> rowData, List<Map<String, Object>> errorList,
+                                    StringBuilder errorBuilder, Map<String, Integer> headerIndexMap) {
         double addendValue = getValue(row, headerIndexMap.get(addend));
         double operandValue = getValue(row, headerIndexMap.get(operand));
         double result = performCalculation(operator, addendValue, operandValue);
+
+        System.out.println(result);
 
         if (result != 0.0 && headerIndexMap.containsKey(resultKey)) {
             double expectedBalance = getValue(row, headerIndexMap.get(resultKey));

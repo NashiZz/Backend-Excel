@@ -2,6 +2,8 @@ package com.digio.backend.DTO;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.util.List;
 
 @Data
@@ -147,6 +149,26 @@ public class TemplateRequest {
             public void setResult(String result) {
                 this.result = result;
             }
+
+//            @Setter
+//            private List<String> expression;
+//            private String result;
+//
+//            public List<String> getExpression() {
+//                return expression;
+//            }
+//
+//            public void setExpression(List<String> expression) {
+//                this.expression = expression;
+//            }
+//
+//            public String getResult() {
+//                return result;
+//            }
+//
+//            public void setResult(String result) {
+//                this.result = result;
+//            }
         }
 
         @Data
