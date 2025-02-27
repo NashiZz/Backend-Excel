@@ -2,6 +2,8 @@ package com.digio.backend.DTO;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.util.List;
 
 @Data
@@ -84,6 +86,30 @@ public class TemplateRequest {
         private List<Compare> compares;
         private List<Relation> relations;
 
+        public List<Calculation> getCalculations() {
+            return calculations;
+        }
+
+        public void setCalculations(List<Calculation> calculations) {
+            this.calculations = calculations;
+        }
+
+        public List<Compare> getCompares() {
+            return compares;
+        }
+
+        public void setCompares(List<Compare> compares) {
+            this.compares = compares;
+        }
+
+        public List<Relation> getRelations() {
+            return relations;
+        }
+
+        public void setRelations(List<Relation> relations) {
+            this.relations = relations;
+        }
+
         @Data
         @NoArgsConstructor
         public static class Calculation {
@@ -123,6 +149,26 @@ public class TemplateRequest {
             public void setResult(String result) {
                 this.result = result;
             }
+
+//            @Setter
+//            private List<String> expression;
+//            private String result;
+//
+//            public List<String> getExpression() {
+//                return expression;
+//            }
+//
+//            public void setExpression(List<String> expression) {
+//                this.expression = expression;
+//            }
+//
+//            public String getResult() {
+//                return result;
+//            }
+//
+//            public void setResult(String result) {
+//                this.result = result;
+//            }
         }
 
         @Data

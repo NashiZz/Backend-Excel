@@ -1,7 +1,8 @@
 # Backend-Excel
 
 ## คำอธิบายโครงการ
-โครงการ **Backend-Excel** เป็นระบบ Backend ที่พัฒนาเพื่อจัดการข้อมูลจากไฟล์ Excel โดยใช้ API สำหรับอัปโหลดและประมวลผลข้อมูล รองรับการอ่านและแปลงข้อมูลให้อยู่ในรูปแบบที่สามารถนำไปใช้ต่อได้
+โครงการ **Backend-Excel** เป็นระบบ Backend ที่พัฒนาเพื่อตรวจสอบข้อมูลจากไฟล์ Excel โดยใช้ API สำหรับอัปโหลดและประมวลผลข้อมูล รองรับการอ่านและแปลงข้อมูลให้อยู่ในรูปแบบที่สามารถนำไปใช้ต่อได้
+ระบบนี้จะเชื่อมต่อกับ **[Frontend-Excel](https://github.com/NashiZz/Frontend-Excel)** ซึ่งเป็นส่วนที่ใช้แสดงส่วนข้อผิดพลาดจากไฟล์ Excel บนหน้าเว็บ โดย **Frontend-Excel** จะทำการส่งข้อมูลไปยัง API ของ **Backend-Excel** เพื่อประมวลผลและแสดงผลข้อมูลที่ถูกตรวจสอบตามเงื่อนไขต่างๆ
 
 ## เทคโนโลยีที่ใช้
 - **Spring Boot** - ใช้เป็น Backend หลักของระบบ
@@ -15,6 +16,29 @@ git clone https://github.com/NashiZz/Backend-Excel.git
 cd Backend-Excel
 ```
 
+## ตั้งค่าไฟล์ Config
+```sh
+public class WebConfig {
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**")
+                        .allowedOrigins("http://localhost:3000") // ใส่เป็น web local ของตัวเอง
+                        .allowedMethods("GET", "POST", "PUT", "DELETE")
+                        .allowedHeaders("*");
+            }
+        };
+    }
+}
+```
+
+## รันโปรเจกต์
+```sh
+mvn spring-boot:run
+```
+
 ## โครงสร้างโฟลเดอร์
 ```
 Backend-Excel/
@@ -25,7 +49,13 @@ Backend-Excel/
 ├── validate/          # ตรวจสอบความถูกต้องของข้อมูลที่รับเข้ามาใน API
 ```
 
+## Contributor
+หากต้องการ Merge Code เข้า Repository นี้ สามารถทำได้โดย
+
 ## ผู้พัฒนา
 - **Nashi**
 - **Depttt**
+
+
+
 

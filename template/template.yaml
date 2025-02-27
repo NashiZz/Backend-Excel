@@ -1,0 +1,34 @@
+---
+47cba98b-649d-4dd6-af86-e664681fdccc:
+  templates:
+  - userToken: 47cba98b-649d-4dd6-af86-e664681fdccc
+    templatename: รายชื่อ
+    headers:
+    - name: ชื่อผู้ใช้
+      condition: name
+    - name: รายได้
+      condition: balance
+    - name: อีเมล
+      condition: email
+    condition:
+      calculations: [
+        ]
+    maxRows: 0
+4c65c988-a12d-4e5d-a326-6e4608e8314f:
+  templates:
+  - userToken: 4c65c988-a12d-4e5d-a326-6e4608e8314f
+    templatename: ยอดเงิน
+    headers:
+    - name: รายได้
+      condition: balance
+    - name: รายจ่าย
+      condition: balance
+    - name: ยอดเงินคงเหลือ
+      condition: balance
+    condition:
+      calculations:
+      - type: '-'
+        addend: รายได้
+        operand: รายจ่าย
+        result: ยอดเงินคงเหลือ
+    maxRows: 10
