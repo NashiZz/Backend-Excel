@@ -113,53 +113,33 @@ public class TemplateRequest {
         @Data
         @NoArgsConstructor
         public static class Calculation {
-            private String type;
-            private String addend;
-            private String operand;
-            private String result;
-
-            public String getType() {
-                return type;
-            }
-
-            public void setType(String type) {
-                this.type = type;
-            }
-
-            public String getAddend() {
-                return addend;
-            }
-
-            public void setAddend(String addend) {
-                this.addend = addend;
-            }
-
-            public String getOperand() {
-                return operand;
-            }
-
-            public void setOperand(String operand) {
-                this.operand = operand;
-            }
-
-            public String getResult() {
-                return result;
-            }
-
-            public void setResult(String result) {
-                this.result = result;
-            }
-
-//            @Setter
-//            private List<String> expression;
+//            private String type;
+//            private String addend;
+//            private String operand;
 //            private String result;
 //
-//            public List<String> getExpression() {
-//                return expression;
+//            public String getType() {
+//                return type;
 //            }
 //
-//            public void setExpression(List<String> expression) {
-//                this.expression = expression;
+//            public void setType(String type) {
+//                this.type = type;
+//            }
+//
+//            public String getAddend() {
+//                return addend;
+//            }
+//
+//            public void setAddend(String addend) {
+//                this.addend = addend;
+//            }
+//
+//            public String getOperand() {
+//                return operand;
+//            }
+//
+//            public void setOperand(String operand) {
+//                this.operand = operand;
 //            }
 //
 //            public String getResult() {
@@ -169,6 +149,18 @@ public class TemplateRequest {
 //            public void setResult(String result) {
 //                this.result = result;
 //            }
+
+            @Setter
+            private List<String> expression;
+            private String result;
+
+            public List<String> getExpression() {
+                return expression;
+            }
+
+            public String getResult() {
+                return result;
+            }
         }
 
         @Data

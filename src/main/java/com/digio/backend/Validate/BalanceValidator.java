@@ -6,10 +6,11 @@ public class BalanceValidator {
             return "จำนวนเงินไม่ถูกต้อง";
         }
 
-        if (!balance.matches("^\\d+(\\.\\d{1,2})?$")) {
+        if (!balance.matches("^\\d+(\\.\\d+)?$")) {
             return "จำนวนเงินไม่ถูกต้อง";
         }
 
         return "success";
     }
 }
+
