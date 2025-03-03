@@ -29,7 +29,7 @@ class AddressValidatorTest {
 
         String result = AddressValidator.validate(address);
 
-        assertEquals("ที่อยู่ควรมีความยาวหรือสั้นเกินไป", result, "Address shorter than minimum length should return an error message");
+        assertEquals("ที่อยู่มีความยาวหรือสั้นเกินไป", result, "Address shorter than minimum length should return an error message");
     }
 
     @Test
@@ -38,7 +38,7 @@ class AddressValidatorTest {
 
         String result = AddressValidator.validate(address);
 
-        assertEquals("ที่อยู่ควรมีความยาวหรือสั้นเกินไป", result, "Address longer than maximum length should return an error message");
+        assertEquals("ที่อยู่มีความยาวหรือสั้นเกินไป", result, "Address longer than maximum length should return an error message");
     }
 
     @Test

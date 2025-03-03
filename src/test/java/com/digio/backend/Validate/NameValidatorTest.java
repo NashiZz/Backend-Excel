@@ -47,7 +47,7 @@ class NameValidatorTest {
 
         String result = NameValidator.validate(name);
 
-        assertEquals("ชื่อควรมีเฉพาะตัวอักษรไทยหรือภาษาอังกฤษ และไม่มีอักขระพิเศษ", result, "Name containing special characters should return an error message");
+        assertEquals("ชื่อควรมีเฉพาะตัวอักษรไทยหรือภาษาอังกฤษ", result, "Name containing special characters should return an error message");
     }
 
     @Test

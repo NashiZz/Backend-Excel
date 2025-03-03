@@ -7,6 +7,7 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -35,12 +36,14 @@ public class DynamicValidationServiceTest {
         });
 
         List<Map<String, Object>> errors = dynamicCheckingService.validateExcel(invalidFile);
-        assertTrue(errors.size() > 0, "ควรมีข้อผิดพลาดในแถวที่ 2");
+        assertEquals(6, errors.size(), "ควรมีข้อผิดพลาดในแถวที่ 2");
+        Map<String, Object> expectedError = new HashMap<>();
+        expectedError.put("column", 0);
+        expectedError.put("header", "ชื่อ");
+        expectedError.put("row", 1);
+        expectedError.put("message", "ชื่อควรมีเฉพาะตัวอักษรไทยหรือภาษาอังกฤษ");
 
-        // Check if error details exist
-        Map<String, Object> errorDetails = errors.get(0);
-        assertEquals(2, errorDetails.get("row"));
-        assertTrue(errorDetails.containsKey("message"), "ต้องมีข้อความข้อผิดพลาด");
+        assertEquals(expectedError, errors.get(0));
     }
 
     @Test
@@ -55,13 +58,13 @@ public class DynamicValidationServiceTest {
     @Test
     public void testValidateExcelWithSelectedHeaders_NotFound() throws Exception {
         MockMultipartFile validFile = createExcelFile(new String[][]{
-                {"ชื่อ", "อีเมล" ,"เบอร์โทร"},
-                {"สมชาย ใจดี", "example@test.com", "0938073675"}
+                {"ชื่อ", "อีเมล"},
+                {"สมชาย ใจดี", "example@test.com"}
         });
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-                dynamicCheckingService.validateExcelWithSelectedHeaders(validFile, List.of("วันเกิด")));
-        assertEquals("พบหัวข้อที่ไม่สามารถตรวจสอบได้: วันเกิด", exception.getMessage());
+                dynamicCheckingService.validateExcelWithSelectedHeaders(validFile, List.of("เบอร์โทร")));
+        assertEquals("ไม่พบหัวข้อที่เลือกในไฟล์ Excel", exception.getMessage());
     }
 
     @Test

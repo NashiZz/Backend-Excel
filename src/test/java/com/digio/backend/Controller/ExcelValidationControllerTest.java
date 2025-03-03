@@ -1,6 +1,7 @@
 package com.digio.backend.Controller;
 
 import com.digio.backend.Service.DynamicValidationService;
+import com.digio.backend.Service.TemplateService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -28,6 +29,9 @@ public class ExcelValidationControllerTest {
 
     @MockitoBean
     private DynamicValidationService dynamicCheckingService;
+
+    @MockitoBean
+    private TemplateService templateService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -88,6 +92,66 @@ public class ExcelValidationControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().json(objectMapper.writeValueAsString(
                         Collections.singletonMap("message", "โปรดระบุหัวข้อที่ต้องการตรวจสอบ")
+                )));
+    }
+
+    @Test
+    public void test_emptyTemplateExcelFile() throws Exception {
+        MockMultipartFile emptyFile = new MockMultipartFile("file", "", "application/vnd.ms-excel", new byte[0]);
+
+        mockMvc.perform(multipart("/api/excel/template")
+                        .file(emptyFile)
+                        .param("condition", "header1,header2")
+                        .param("calculater", "calc1")
+                        .param("relation", "rel1")
+                        .param("compare", "comp1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().json(objectMapper.writeValueAsString(
+                        Collections.singletonMap("message", "โปรดอัปโหลดไฟล์ Excel ที่ถูกต้อง")
+                )));
+    }
+
+    @Test
+    public void test_dynamicTemplateWithErrors() throws Exception {
+        MockMultipartFile invalidFile = new MockMultipartFile("file", "test.xlsx", "application/vnd.ms-excel", "dummy content".getBytes());
+
+        // Mock ค่าผลลัพธ์เป็น List<Map<String, Object>>
+        Map<String, Object> error1 = new HashMap<>();
+        error1.put("error", "Missing Header");
+        Map<String, Object> error2 = new HashMap<>();
+        error2.put("error", "Invalid Data");
+
+        Mockito.when(templateService.handleUploadWithTemplate(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+                .thenReturn(List.of(error1, error2));
+
+        mockMvc.perform(multipart("/api/excel/template")
+                        .file(invalidFile)
+                        .param("condition", "header1,header2")
+                        .param("calculater", "calc1")
+                        .param("relation", "rel1")
+                        .param("compare", "comp1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors").isArray())
+                .andExpect(jsonPath("$.errors[0].error").value("Missing Header"))
+                .andExpect(jsonPath("$.errors[1].error").value("Invalid Data"));
+    }
+
+    @Test
+    public void test_DynamicTemplateWithNoErrors() throws Exception {
+        MockMultipartFile validFile = new MockMultipartFile("file", "test.xlsx", "application/vnd.ms-excel", "dummy content".getBytes());
+
+        Mockito.when(templateService.handleUploadWithTemplate(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()))
+                .thenReturn(Collections.emptyList());
+
+        mockMvc.perform(multipart("/api/excel/template")
+                        .file(validFile)
+                        .param("condition", "header1,header2")
+                        .param("calculater", "calc1")
+                        .param("relation", "rel1")
+                        .param("compare", "comp1"))
+                .andExpect(status().isOk())
+                .andExpect(content().json(objectMapper.writeValueAsString(
+                        Collections.singletonMap("message", "ไฟล์ Excel ถูกต้อง ไม่มีข้อผิดพลาด")
                 )));
     }
 }
