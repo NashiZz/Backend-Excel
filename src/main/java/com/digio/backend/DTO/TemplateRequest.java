@@ -11,6 +11,7 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class TemplateRequest {
     private String userToken;
+    private String template_id;
     private String templatename;
     private List<Header> headers;
     private Condition condition;
@@ -22,6 +23,14 @@ public class TemplateRequest {
 
     public void setUserToken(String userToken) {
         this.userToken = userToken;
+    }
+
+    public String getTemplate_id() {
+        return template_id;
+    }
+
+    public void setTemplate_id(String template_id) {
+        this.template_id = template_id;
     }
 
     public String getTemplatename() {

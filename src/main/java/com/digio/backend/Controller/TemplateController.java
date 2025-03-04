@@ -95,8 +95,8 @@ public class TemplateController {
         return ResponseEntity.ok(Map.of("message", "User token added successfully"));
     }
 
-    @DeleteMapping("/{userToken}/{templateName}")
-    public ResponseEntity<Object> deleteTemplate(@PathVariable String userToken, @PathVariable String templateName) {
+    @DeleteMapping("/{userToken}/{templateId}")
+    public ResponseEntity<Object> deleteTemplate(@PathVariable String userToken, @PathVariable String templateId) {
         Map<String, Map<String, List<Map<String, Object>>>> yamlData = readYamlFromStorage();
 
         if (!yamlData.containsKey(userToken) || yamlData.get(userToken).get("templates") == null) {
@@ -105,7 +105,7 @@ public class TemplateController {
         }
 
         List<Map<String, Object>> templates = yamlData.get(userToken).get("templates");
-        boolean removed = templates.removeIf(t -> templateName.equals(t.get("templatename")));
+        boolean removed = templates.removeIf(t -> templateId.equals(t.get("template_id")));
 
         if (!removed) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -117,8 +117,8 @@ public class TemplateController {
         return ResponseEntity.ok(Map.of("message", "Template deleted successfully"));
     }
 
-    @PutMapping("/{userToken}/{templateName}")
-    public ResponseEntity<Object> updateTemplate(@PathVariable String userToken, @PathVariable String templateName,
+    @PutMapping("/{userToken}/{templateId}")
+    public ResponseEntity<Object> updateTemplate(@PathVariable String userToken, @PathVariable String templateId,
                                                  @RequestBody TemplateRequest templateRequest) {
         Map<String, Map<String, List<Map<String, Object>>>> yamlData = readYamlFromStorage();
 
@@ -132,7 +132,7 @@ public class TemplateController {
 
         boolean updated = false;
         for (int i = 0; i < templates.size(); i++) {
-            if (templateName.equals(templates.get(i).get("templatename"))) {
+            if (templateId.equals(templates.get(i).get("template_id"))) {
                 templates.set(i, updatedTemplate);
                 updated = true;
                 break;
