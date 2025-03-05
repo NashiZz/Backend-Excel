@@ -40,6 +40,7 @@ public class TemplateService {
             List<List<String>> parsedCompares = parseCompares(compare);
             List<String> flatHeaders = cleanHeaders(expectedHeaders);
             System.out.println(parsedCalculations);
+            System.out.println(parsedRelations);
 
             return processSheet(sheet, flatHeaders, parsedRelations,  parsedCalculations, parsedCompares);
 
@@ -179,6 +180,47 @@ public class TemplateService {
                     }
                 }
             }
+        } if ((calculations != null && !calculations.isEmpty()) &&
+                (relation != null && !relation.isEmpty())) {
+            for (List<String> calc : calculations) {
+                for (List<String> rela : relation) {
+                    List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers,
+                            null, rela, calc, null);
+                    if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
+                        lastErrorList = tempResult;
+                    } else {
+                        resultList.addAll(tempResult);
+                    }
+                }
+            }
+        }
+        else if ((calculations != null && !calculations.isEmpty()) &&
+                (compares != null && !compares.isEmpty())) {
+            for (List<String> calc : calculations) {
+                for (List<String> comp : compares) {
+                    List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers,
+                            null, null, calc, comp);
+                    if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
+                        lastErrorList = tempResult;
+                    } else {
+                        resultList.addAll(tempResult);
+                    }
+                }
+            }
+        }
+        else if ((relation != null && !relation.isEmpty()) &&
+                (compares != null && !compares.isEmpty())) {
+            for (List<String> rela : relation) {
+                for (List<String> comp : compares) {
+                    List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers,
+                            null, rela, null, comp);
+                    if (!tempResult.isEmpty() && tempResult.get(0).containsKey("summary")) {
+                        lastErrorList = tempResult;
+                    } else {
+                        resultList.addAll(tempResult);
+                    }
+                }
+            }
         } else if (calculations != null && !calculations.isEmpty()) {
             for (List<String> calc : calculations) {
                 List<Map<String, Object>> tempResult = processRowsAndCalculations(sheet, headers,
@@ -222,6 +264,7 @@ public class TemplateService {
         List<Map<String, Object>> resultList = new ArrayList<>();
         List<Map<String, Object>> errorList = new ArrayList<>();
         Map<Integer, String> errorSummaryMap = new TreeMap<>();
+        Map<String, Map<String, Integer>> duplicateTracker = new HashMap<>();
 
         Map<String, Integer> headerIndexMap = getHeaderIndexMap(sheet.getRow(0));
         List<String> header = headerIndexMap.entrySet()
@@ -231,11 +274,6 @@ public class TemplateService {
                 .collect(Collectors.toList());
 
         System.out.println(header);
-//        boolean hasCalculation = calculation != null && calculation.size() == 4;
-//        String operator = hasCalculation ? calculation.get(0).trim() : null;
-//        String addend = hasCalculation ? calculation.get(1).trim() : null;
-//        String operand = hasCalculation ? calculation.get(2).trim() : null;
-//        String resultKey = hasCalculation ? calculation.get(3).trim() : null;
 
         String resultKey = (calculation != null && !calculation.isEmpty()) ? calculation.get(calculation.size() - 1).trim() : null;
 
@@ -245,6 +283,7 @@ public class TemplateService {
             StringBuilder errorBuilder = new StringBuilder();
 
             processRowValidation(row, headers, header, selectedIndices, errorList, errorBuilder, headerIndexMap);
+            checkDuplicateEntries(row, headers, header, duplicateTracker, errorList, errorBuilder);
             if (relation != null && !relation.isEmpty()) checkRelation(row, relation, errorList, errorBuilder, headerIndexMap);
 //            if (hasCalculation) processCalculation(row, operator, addend, operand, resultKey,
 //                    rowData, errorList, errorBuilder, headerIndexMap);
@@ -287,6 +326,42 @@ public class TemplateService {
         }
     }
 
+    private void checkDuplicateEntries(Row row, List<String> headers, List<String> head,
+                                       Map<String, Map<String, Integer>> duplicateTracker,
+                                       List<Map<String, Object>> errorList,
+                                       StringBuilder errorBuilder) {
+        String[] fieldsToCheck = {"name", "citizenid", "phone", "email"};
+        System.out.println("🔍 Checking duplicate entries with headers: " + headers);
+
+        for (String field : fieldsToCheck) {
+            int colIndex = headers.indexOf(field);
+
+            if (colIndex != -1) {
+                String value = getCellValue(row.getCell(colIndex)).trim();
+                String heads = (head != null && head.size() > colIndex) ? head.get(colIndex) : headers.get(colIndex);
+
+                System.out.println("Checking column: " + field + " | Row: " + row.getRowNum() + " | Value: " + value);
+
+                if (!value.isEmpty()) {
+                    duplicateTracker.putIfAbsent(field, new HashMap<>());
+                    Map<String, Integer> fieldDuplicateMap = duplicateTracker.get(field);
+
+                    if (fieldDuplicateMap.containsKey(value)) {
+                        int duplicateRowNum = fieldDuplicateMap.get(value);
+                        String errorMessage = "ค่าซ้ำในคอลัมน์ '" + heads + " (ค่า: " + value + ") ซ้ำกับแถว " + (duplicateRowNum + 1);
+                        System.out.println("❌ พบค่าซ้ำ: " + value + " ในคอลัมน์ " + heads + " ที่แถว " + (row.getRowNum() + 1));
+
+                        addErrorDetails(row, colIndex, heads, errorMessage, errorList);
+                        errorBuilder.append(errorMessage).append("; ");
+                    } else {
+                        System.out.println("✅ ไม่ซ้ำ: " + value + " ในคอลัมน์ " + heads);
+                        fieldDuplicateMap.put(value, row.getRowNum());
+                    }
+                }
+            }
+        }
+    }
+
     private void processComparison(Row row, List<String> compare, List<Map<String, Object>> errorList,
                                    StringBuilder errorBuilder, Map<String, Integer> headerIndexMap) {
         String operator = compare.get(0).trim();
@@ -319,7 +394,7 @@ public class TemplateService {
         String value2 = getCell(row, headerIndexMap.get(column2));
 
         if (!checkRelation(value1, condition, value2)) {
-            String relationError = "ไม่ตรงกับความสัมพันธ์: " + value1 + " " + condition + " " + value2;
+            String relationError = "ไม่ตรงกับความสัมพันธ์: " + column1 + " " + condition + " " + column2;
             addErrorDetails(row, headerIndexMap.get(column2), column2, relationError, errorList);
             errorBuilder.append(relationError).append("; ");
         }
