@@ -1,12 +1,14 @@
 package com.digio.backend.Controller;
 
 import com.digio.backend.DTO.ExcelDataRequest;
+import com.digio.backend.Service.ExcelDataService;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +22,24 @@ import java.util.Map;
 @RequestMapping("/api")
 public class ExcelDataController {
     private static final Logger logger = LoggerFactory.getLogger(ExcelDataController.class);
+
+    private final ExcelDataService excelDataService;
+
+    @Autowired
+    public ExcelDataController(ExcelDataService excelDataService) {
+        this.excelDataService = excelDataService;
+    }
+
+    @PostMapping("/saveNewUpdate")
+    public ResponseEntity<String> saveNewDataAndUpdate(@RequestBody ExcelDataRequest request) {
+        try {
+            excelDataService.saveExcelData(request);
+            return ResponseEntity.ok("บันทึกข้อมูลสำเร็จ!");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + e.getMessage());
+        }
+    }
 
     @PostMapping("/saveExcelData")
     public ResponseEntity<String> saveExcelData(@Valid @RequestBody ExcelDataRequest request) {
@@ -35,7 +55,6 @@ public class ExcelDataController {
             data.put("template_id", request.getTemplateId());
             data.put("update_at", request.getUpdateAt());
 
-            // บันทึกข้อมูล
             docRef.set(data).get();
             CollectionReference recordsRef = docRef.collection("records");
             for (Map<String, Object> record : request.getRecords()) {
@@ -57,12 +76,10 @@ public class ExcelDataController {
         try {
             Firestore db = FirestoreClient.getFirestore();
 
-            // อ้างถึง Collection ที่มี templateId
             CollectionReference templateRef = db.collection("Templates_Data")
                     .document(userToken)
                     .collection(templateId);
 
-            // ดึง documentId ที่อยู่ภายใน templateId (อันแรกที่เจอ)
             ApiFuture<QuerySnapshot> querySnapshot = templateRef.get();
             List<QueryDocumentSnapshot> documents = querySnapshot.get().getDocuments();
 
@@ -93,13 +110,5 @@ public class ExcelDataController {
         }
     }
 
-    private boolean compareRecords(Map<String, Object> record1, Map<String, Object> record2, List<String> headers) {
-        for (String header : headers) {
-            if (!record1.get(header).equals(record2.get(header))) {
-                return false;
-            }
-        }
-        return true;
-    }
 }
 
