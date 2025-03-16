@@ -11,6 +11,7 @@ import java.util.Map;
 public class ExcelDataRequest {
     private String userToken;
     private String templateId;
+    private String fileName;
     private String uploadedAt;
     private String updateAt;
     private List<Map<String, Object>> records;

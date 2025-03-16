@@ -6,6 +6,7 @@ import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -43,8 +44,30 @@ public class ExcelDataService {
         docRef.set(data, SetOptions.merge()).get();
         CollectionReference recordsRef = docRef.collection("records");
 
+        ApiFuture<QuerySnapshot> future = recordsRef.get();
+        List<QueryDocumentSnapshot> existingDocs = future.get().getDocuments();
+        int currentSize = existingDocs.size();
+        int newId = currentSize + 1;
+
         for (Map<String, Object> record : request.getRecords()) {
-            recordsRef.add(record).get();
+            if (record.containsKey("documentId")) {
+                String recordDocumentId = (String) record.get("documentId");
+                DocumentReference recordRef = recordsRef.document(recordDocumentId);
+
+                Map<String, Object> updateData = new HashMap<>(record);
+                updateData.remove("documentId");
+
+                recordRef.set(updateData, SetOptions.merge()).get();
+                System.out.println("🔄 Updated Record ID: " + recordDocumentId);
+            } else {
+                String newDocumentId = String.format("%04d", newId);
+                record.put("documentId", newDocumentId);
+
+                recordsRef.document(newDocumentId).set(record).get();
+                System.out.println("🆕 Added New Record with ID: " + newDocumentId);
+
+                newId++;
+            }
         }
     }
 }
