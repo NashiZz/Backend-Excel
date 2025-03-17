@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @RestController
@@ -33,48 +34,43 @@ public class ExcelDataController {
         this.excelDataService = excelDataService;
     }
 
-    @GetMapping("/exportExcel")
-    public ResponseEntity<byte[]> exportExcel(@RequestParam String userToken, @RequestParam String docName, @RequestParam String templateId) {
+    @PostMapping("/exportExcel")
+    public ResponseEntity<byte[]> exportExcel(@RequestBody Map<String, Object> requestBody) {
         try {
-            Firestore db = FirestoreClient.getFirestore();
+            String userToken = (String) requestBody.get("userToken");
+            String docName = (String) requestBody.get("fileName");
+            String templateId = (String) requestBody.get("templateId");
+            List<String> orderedHeaders = (List<String>) requestBody.get("orderedHeaders");
 
-            Query query = db.collection("Templates_Data")
+            Firestore db = FirestoreClient.getFirestore();
+            DocumentReference docRef = db.collection("Templates_Data")
                     .document(userToken)
                     .collection(templateId)
-                    .whereEqualTo("file_name", docName)
-                    .limit(1);
+                    .document(docName);
 
-            ApiFuture<QuerySnapshot> querySnapshot = query.get();
-            List<QueryDocumentSnapshot> documents = querySnapshot.get().getDocuments();
+            ApiFuture<DocumentSnapshot> future = docRef.get();
+            DocumentSnapshot document = future.get();
 
-            if (documents.isEmpty()) {
+            if (!document.exists()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(("ไม่พบข้อมูล Template ที่มีชื่อไฟล์: " + docName + " ค่ะ").getBytes());
+                        .body(("ไม่พบข้อมูล Template: " + docName).getBytes(StandardCharsets.UTF_8));
             }
 
-            DocumentSnapshot firstDocument = documents.get(0);
-            String documentId = firstDocument.getId();
-
-            CollectionReference recordsRef = db.collection("Templates_Data")
-                    .document(userToken)
-                    .collection(templateId)
-                    .document(documentId)
-                    .collection("records");
-
-            ApiFuture<QuerySnapshot> future = recordsRef.get();
-            List<QueryDocumentSnapshot> records = future.get().getDocuments();
+            CollectionReference recordsRef = docRef.collection("records");
+            ApiFuture<QuerySnapshot> recordsFuture = recordsRef.get();
+            List<QueryDocumentSnapshot> records = recordsFuture.get().getDocuments();
 
             if (records.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("ไม่พบข้อมูล Records".getBytes());
+                        .body("ไม่พบข้อมูล Records".getBytes(StandardCharsets.UTF_8));
             }
 
-            ByteArrayOutputStream outputStream = createExcelFile(records);
+            ByteArrayOutputStream outputStream = createExcelFile(records, orderedHeaders);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
             headers.setContentDisposition(ContentDisposition.attachment()
-                    .filename(docName + ".xlsx")
+                    .filename(docName + ".xlsx", StandardCharsets.UTF_8)
                     .build());
 
             return new ResponseEntity<>(outputStream.toByteArray(), headers, HttpStatus.OK);
@@ -82,7 +78,65 @@ public class ExcelDataController {
         } catch (Exception e) {
             logger.error("เกิดข้อผิดพลาดขณะ Export ข้อมูล: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(("Error exporting data: " + e.getMessage()).getBytes());
+                    .body(("Error exporting data: " + e.getMessage()).getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    private ByteArrayOutputStream createExcelFile(List<QueryDocumentSnapshot> records, List<String> orderedHeaders) {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Data");
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < orderedHeaders.size(); i++) {
+                headerRow.createCell(i).setCellValue(orderedHeaders.get(i));
+            }
+
+            int rowNum = 1;
+            for (QueryDocumentSnapshot record : records) {
+                Row row = sheet.createRow(rowNum++);
+                for (int i = 0; i < orderedHeaders.size(); i++) {
+                    String columnName = orderedHeaders.get(i);
+                    Object value = record.get(columnName);
+                    String cellValue = (value != null) ? value.toString() : "";
+                    row.createCell(i).setCellValue(cellValue);
+                }
+            }
+
+            workbook.write(outputStream);
+            return outputStream;
+
+        } catch (IOException e) {
+            throw new RuntimeException("Error creating Excel file", e);
+        }
+    }
+
+    @GetMapping("/checkFileExists")
+    public ResponseEntity<Map<String, Object>> checkFileExists(
+            @RequestParam String userToken,
+            @RequestParam String templateId) {
+        try {
+            Firestore db = FirestoreClient.getFirestore();
+
+            CollectionReference templateRef = db.collection("Templates_Data")
+                    .document(userToken)
+                    .collection(templateId);
+
+            ApiFuture<QuerySnapshot> fileFuture = templateRef.limit(1).get();
+            List<QueryDocumentSnapshot> fileDocs = fileFuture.get().getDocuments();
+
+            boolean exists = !fileDocs.isEmpty();
+            String docId = exists ? fileDocs.get(0).getId() : null;
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("exists", exists);
+            response.put("fileName", docId);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("❌ Error checking file existence: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "เกิดข้อผิดพลาดในเซิร์ฟเวอร์"));
         }
     }
 
@@ -115,7 +169,7 @@ public class ExcelDataController {
             data.put("uploaded_at", request.getUploadedAt());
             data.put("template_id", request.getTemplateId());
             data.put("update_at", request.getUpdateAt());
-            data.put("file_name", documentId); // 🔹
+            data.put("file_name", documentId);
 
             docRef.set(data).get();
             CollectionReference recordsRef = docRef.collection("records");
@@ -179,43 +233,6 @@ public class ExcelDataController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Error fetching data: " + e.getMessage()));
         }
-    }
-
-    private ByteArrayOutputStream createExcelFile(List<QueryDocumentSnapshot> records) throws IOException {
-        Workbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet("Exported Data");
-
-        Row headerRow = sheet.createRow(0);
-        List<String> headers = new ArrayList<>(records.get(0).getData().keySet());
-
-        for (int i = 0; i < headers.size(); i++) {
-            Cell cell = headerRow.createCell(i);
-            cell.setCellValue(headers.get(i));
-        }
-
-        int rowNum = 1;
-        for (QueryDocumentSnapshot record : records) {
-            Row row = sheet.createRow(rowNum++);
-            Map<String, Object> data = record.getData();
-
-            for (int i = 0; i < headers.size(); i++) {
-                Cell cell = row.createCell(i);
-                Object value = data.get(headers.get(i));
-
-                if (value instanceof Number) {
-                    cell.setCellValue(((Number) value).doubleValue());
-                } else if (value != null) {
-                    cell.setCellValue(value.toString());
-                } else {
-                    cell.setCellValue("");
-                }
-            }
-        }
-
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        workbook.write(outputStream);
-        workbook.close();
-        return outputStream;
     }
 
     @PostMapping("/getUploadedFiles")
