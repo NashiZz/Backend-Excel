@@ -6,10 +6,7 @@ import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
 import jakarta.validation.Valid;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,9 +84,23 @@ public class ExcelDataController {
             Sheet sheet = workbook.createSheet("Data");
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(IndexedColors.LIGHT_TURQUOISE.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
+            headerStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
             Row headerRow = sheet.createRow(0);
+            headerRow.setHeightInPoints(25);
             for (int i = 0; i < orderedHeaders.size(); i++) {
-                headerRow.createCell(i).setCellValue(orderedHeaders.get(i));
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(orderedHeaders.get(i));
+                cell.setCellStyle(headerStyle);
+                sheet.setColumnWidth(i, 5000);
             }
 
             int rowNum = 1;
@@ -134,20 +145,26 @@ public class ExcelDataController {
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            logger.error("❌ Error checking file existence: ", e);
+            logger.error("Error checking file existence: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Collections.singletonMap("error", "เกิดข้อผิดพลาดในเซิร์ฟเวอร์"));
         }
     }
 
     @PostMapping("/saveNewUpdate")
-    public ResponseEntity<String> saveNewDataAndUpdate(@RequestBody ExcelDataRequest request) {
+    public ResponseEntity<Map<String, String>> saveNewDataAndUpdate(@RequestBody ExcelDataRequest request) {
         try {
             excelDataService.saveExcelData(request);
-            return ResponseEntity.ok("บันทึกข้อมูลสำเร็จ!");
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "บันทึกข้อมูลสำเร็จ!");
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("เกิดข้อผิดพลาดในการบันทึกข้อมูล: " + e.getMessage());
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "เกิดข้อผิดพลาด: " + e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 
@@ -186,11 +203,11 @@ public class ExcelDataController {
                 newId++;
             }
 
-            return ResponseEntity.ok("✅ Data saved successfully with File Name: " + documentId);
+            return ResponseEntity.ok("Data saved successfully with File Name: " + documentId);
         } catch (Exception e) {
-            logger.error("❌ Error saving data: ", e);
+            logger.error("Error saving data: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("❌ Error saving data: " + e.getMessage());
+                    .body("Error saving data: " + e.getMessage());
         }
     }
 
@@ -289,7 +306,7 @@ public class ExcelDataController {
             return ResponseEntity.ok(Map.of("files", fileList));
 
         } catch (Exception e) {
-            logger.error("❌ Error fetching uploaded files: ", e);
+            logger.error("Error fetching uploaded files: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "เกิดข้อผิดพลาดในการดึงข้อมูล"));
         }
@@ -321,7 +338,7 @@ public class ExcelDataController {
 
             return ResponseEntity.ok(recordsList);
         } catch (Exception e) {
-            logger.error("❌ Error fetching records: ", e);
+            logger.error("Error fetching records: ", e);
             return ResponseEntity.internalServerError().build();
         }
     }
