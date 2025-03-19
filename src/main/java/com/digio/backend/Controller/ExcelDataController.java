@@ -31,6 +31,40 @@ public class ExcelDataController {
         this.excelDataService = excelDataService;
     }
 
+    @PostMapping("/export-excel")
+    public ResponseEntity<byte[]> exportExcels(@RequestBody Map<String, Object> requestData) {
+        try {
+            logger.info("Received request for exporting Excel");
+
+            // ตรวจสอบว่า requestData มีค่าหรือไม่
+            if (requestData == null || !requestData.containsKey("identicalRecords") || !requestData.containsKey("headers")) {
+                logger.error("Invalid request: missing 'identicalRecords' or 'headers'");
+                return ResponseEntity.badRequest().body(null);
+            }
+
+            List<Map<String, Object>> identicalRecords = (List<Map<String, Object>>) requestData.get("identicalRecords");
+            List<String> headers = (List<String>) requestData.get("headers");
+
+            // ตรวจสอบว่าไม่มีค่าเป็น null
+            if (identicalRecords == null || headers == null) {
+                logger.error("Identical records or headers are null");
+                return ResponseEntity.badRequest().body(null);
+            }
+
+            logger.info("Processing {} identical records with {} headers", identicalRecords.size(), headers.size());
+
+            byte[] excelFile = excelDataService.generateExcelFile(identicalRecords, headers);
+
+            HttpHeaders headersResponse = new HttpHeaders();
+            headersResponse.set("Content-Disposition", "attachment; filename=identical_records_comparison.xlsx");
+
+            return new ResponseEntity<>(excelFile, headersResponse, HttpStatus.OK);
+        } catch (Exception e) {
+            logger.error("Error generating Excel file", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
     @PostMapping("/exportExcel")
     public ResponseEntity<byte[]> exportExcel(@RequestBody Map<String, Object> requestBody) {
         try {
