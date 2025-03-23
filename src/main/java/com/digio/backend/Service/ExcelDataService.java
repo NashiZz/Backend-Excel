@@ -142,9 +142,8 @@ public class ExcelDataService {
             Row row = sheet.createRow(rowNum++);
             boolean hasChanges = false;
 
-            // สร้าง CellStyle สำหรับไฮไลท์เซลล์ที่มีการเปลี่ยนแปลง
             CellStyle changeCellStyle = workbook.createCellStyle();
-            changeCellStyle.setFillForegroundColor(IndexedColors.YELLOW.getIndex());  // สีเหลือง
+            changeCellStyle.setFillForegroundColor(IndexedColors.YELLOW.getIndex());
             changeCellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 
             for (int i = 0; i < headers.size(); i++) {
@@ -161,24 +160,20 @@ public class ExcelDataService {
                     cell.setCellValue(value != null ? value.toString() : "-");
                 }
 
-                // ตรวจสอบว่าเซลล์นี้มีการเปลี่ยนแปลงจากข้อมูลเดิม
                 if (sheetName.equals("ข้อมูลที่ส่งไปรีวิว") && record.containsKey("differences")) {
                     Map<String, Map<String, Object>> differences = (Map<String, Map<String, Object>>) record.get("differences");
                     if (differences != null && differences.containsKey(headers.get(i))) {
-                        hasChanges = true; // ถ้ามีการเปลี่ยนแปลง
-                        // ไฮไลท์เฉพาะเซลล์ที่มีการเปลี่ยนแปลง
+                        hasChanges = true;
                         cell.setCellStyle(changeCellStyle);
                     }
                 }
             }
 
-            // ถ้ามีการเปลี่ยนแปลงให้เพิ่มข้อมูลที่เปลี่ยนแปลงในแถวถัดไป
             if (hasChanges) {
                 Row changeRow = sheet.createRow(rowNum++);
                 for (int i = 0; i < headers.size(); i++) {
                     String header = headers.get(i);
 
-                    // หากมีการเปลี่ยนแปลงจะเพิ่มรายละเอียดของการเปลี่ยนแปลง
                     if (record.containsKey("differences")) {
                         Map<String, Map<String, Object>> differences = (Map<String, Map<String, Object>>) record.get("differences");
                         if (differences != null && differences.containsKey(header)) {
@@ -186,7 +181,6 @@ public class ExcelDataService {
                             Cell changeCell = changeRow.createCell(i);
                             changeCell.setCellValue(formatValue(diff.get("old")) + " -> " + formatValue(diff.get("new")));
 
-                            // จัดให้อยู่ด้านขวา
                             changeCell.setCellStyle(changeCellStyle);
                             changeCell.getCellStyle().setAlignment(HorizontalAlignment.RIGHT);  // จัดชิดขวา
                         }

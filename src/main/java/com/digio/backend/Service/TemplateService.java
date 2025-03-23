@@ -331,7 +331,7 @@ public class TemplateService {
                                        List<Map<String, Object>> errorList,
                                        StringBuilder errorBuilder) {
         String[] fieldsToCheck = {"name", "citizenid", "phone", "email"};
-        System.out.println("🔍 Checking duplicate entries with headers: " + headers);
+        System.out.println("Checking duplicate entries with headers: " + headers);
 
         for (String field : fieldsToCheck) {
             int colIndex = headers.indexOf(field);
@@ -349,12 +349,12 @@ public class TemplateService {
                     if (fieldDuplicateMap.containsKey(value)) {
                         int duplicateRowNum = fieldDuplicateMap.get(value);
                         String errorMessage = "ค่าซ้ำในคอลัมน์ '" + heads + " (ค่า: " + value + ") ซ้ำกับแถว " + (duplicateRowNum + 1);
-                        System.out.println("❌ พบค่าซ้ำ: " + value + " ในคอลัมน์ " + heads + " ที่แถว " + (row.getRowNum() + 1));
+                        System.out.println("พบค่าซ้ำ: " + value + " ในคอลัมน์ " + heads + " ที่แถว " + (row.getRowNum() + 1));
 
                         addErrorDetails(row, colIndex, heads, errorMessage, errorList);
                         errorBuilder.append(errorMessage).append("; ");
                     } else {
-                        System.out.println("✅ ไม่ซ้ำ: " + value + " ในคอลัมน์ " + heads);
+                        System.out.println("ไม่ซ้ำ: " + value + " ในคอลัมน์ " + heads);
                         fieldDuplicateMap.put(value, row.getRowNum());
                     }
                 }
@@ -420,6 +420,7 @@ public class TemplateService {
 //            }
 //        }
 //    }
+
     private void processCalculation(Row row, List<String> calculation,
                                     String resultKey, Map<String, Object> rowData,
                                     List<Map<String, Object>> errorList,

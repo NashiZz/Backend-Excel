@@ -36,7 +36,6 @@ public class ExcelDataController {
         try {
             logger.info("Received request for exporting Excel");
 
-            // ตรวจสอบว่า requestData มีค่าหรือไม่
             if (requestData == null || !requestData.containsKey("identicalRecords") || !requestData.containsKey("headers")) {
                 logger.error("Invalid request: missing 'identicalRecords' or 'headers'");
                 return ResponseEntity.badRequest().body(null);
@@ -45,7 +44,6 @@ public class ExcelDataController {
             List<Map<String, Object>> identicalRecords = (List<Map<String, Object>>) requestData.get("identicalRecords");
             List<String> headers = (List<String>) requestData.get("headers");
 
-            // ตรวจสอบว่าไม่มีค่าเป็น null
             if (identicalRecords == null || headers == null) {
                 logger.error("Identical records or headers are null");
                 return ResponseEntity.badRequest().body(null);
@@ -203,7 +201,7 @@ public class ExcelDataController {
     }
 
     @PostMapping("/saveExcelData")
-    public ResponseEntity<String> saveExcelData(@Valid @RequestBody ExcelDataRequest request) {
+    public ResponseEntity<Map<String, String>> saveExcelData(@Valid @RequestBody ExcelDataRequest request) {
         try {
             Firestore db = FirestoreClient.getFirestore();
 
@@ -237,11 +235,16 @@ public class ExcelDataController {
                 newId++;
             }
 
-            return ResponseEntity.ok("Data saved successfully with File Name: " + documentId);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Data saved successfully");
+            response.put("fileName", documentId);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error saving data: ", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error saving data: " + e.getMessage());
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Error saving data: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 
